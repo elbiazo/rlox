@@ -28,9 +28,9 @@ pub enum TokenType {
 
   EOF,
 }
-pub struct Token {
-    TokenType: 
-}
+// pub struct Token {
+//     TokenType: 
+// }
 
 impl Lox {
     pub fn new() -> Self {
