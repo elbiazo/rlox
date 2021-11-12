@@ -1,5 +1,5 @@
-use std::fmt;
 use std::any::Any;
+use std::fmt;
 
 pub enum TokenType {
     // Single-character tokens.
@@ -107,11 +107,6 @@ pub struct Token<T> {
     line: usize,
 }
 
-impl<T> fmt::Display for Token<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{:?} {} {}", self.tok_type, self.lexme, self.line)
-    }
-}
 impl<T> fmt::Debug for Token<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{:?} {} {}", self.tok_type, self.lexme, self.line)
@@ -162,10 +157,13 @@ impl Scanner {
     }
 
     fn advance(&mut self) -> char {
-        let c = self.source.chars().nth(self.current).expect("Index does not exist for source");
+        let c = self
+            .source
+            .chars()
+            .nth(self.current)
+            .expect("Index does not exist for source");
         self.current += 1;
         c
-
     }
 
     fn add_token(&mut self, tok_type: TokenType) {
@@ -190,7 +188,10 @@ impl Scanner {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::SemiColon),
             '*' => self.add_token(TokenType::Star),
-            _ => assert!(true, "scan_token received character that is not implemented"),
+            _ => assert!(
+                true,
+                "scan_token received character that is not implemented"
+            ),
         }
     }
 
@@ -199,8 +200,12 @@ impl Scanner {
             self.start = self.current;
             self.scan_token();
         }
-        self.tokens
-            .push(Token::new(TokenType::Eof, String::from(""),Literal::Null(None) ,self.line));
+        self.tokens.push(Token::new(
+            TokenType::Eof,
+            String::from(""),
+            Literal::Null(None),
+            self.line,
+        ));
         println!("{:?}", self.tokens);
     }
 
