@@ -4,9 +4,7 @@ pub struct Scanner {
 
 impl Scanner {
     pub fn new(source: String) -> Self {
-        Scanner {
-            source: source,
-        }
+        Scanner { source }
     }
 
     pub fn scan_tokens(&self) {
