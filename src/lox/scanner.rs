@@ -112,6 +112,11 @@ impl<T> fmt::Display for Token<T> {
         write!(fmt, "{:?} {} {}", self.tok_type, self.lexme, self.line)
     }
 }
+impl<T> fmt::Debug for Token<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{:?} {} {}", self.tok_type, self.lexme, self.line)
+    }
+}
 impl<T> Token<T> {
     pub fn new(tok_type: TokenType, lexme: String, literal: T, line: usize) -> Token<T> {
         Token {
@@ -127,12 +132,22 @@ enum Literal {
     Str(String),
     Int(usize),
 }
+impl fmt::Debug for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Literal::Null(_) => write!(f, "None"),
+            Literal::Str(s) => write!(f, "{}", s),
+            Literal::Int(i) => write!(f, "{}", i),
+            _ => write!(f, ""),
+        }
+    }
+}
 pub struct Scanner {
     pub source: String,
     current: usize,
     start: usize,
     line: usize,
-    tokens: Vec<Literal>,
+    tokens: Vec<Token<Literal>>,
 }
 
 impl Scanner {
@@ -146,20 +161,24 @@ impl Scanner {
         }
     }
 
-    fn advance(&self) -> char {
+    fn advance(&mut self) -> char {
+        let c = self.source.chars().nth(self.current).expect("Index does not exist for source");
         self.current += 1;
-        return self.source.chars().nth(self.current).expect("Index does not exist for source")
-    }
-
-    fn add_token(&self, tok_type: TokenType) {
-        add_token(type
-    }
-
-    fn add_token_lit(&self, toke_type: TokenType, lit: Literal) {
+        c
 
     }
-    fn scan_token(&self) {
-        let mut c = self.advance();
+
+    fn add_token(&mut self, tok_type: TokenType) {
+        self.add_token_lit(tok_type, Literal::Null(None));
+    }
+
+    fn add_token_lit(&mut self, tok_type: TokenType, lit: Literal) {
+        let text = String::from(&self.source[self.start..self.current]);
+        self.tokens.push(Token::new(tok_type, text, lit, self.line));
+    }
+
+    fn scan_token(&mut self) {
+        let c = self.advance();
         match c {
             '(' => self.add_token(TokenType::LeftParen),
             ')' => self.add_token(TokenType::RightParen),
@@ -172,7 +191,6 @@ impl Scanner {
             ';' => self.add_token(TokenType::SemiColon),
             '*' => self.add_token(TokenType::Star),
             _ => assert!(true, "scan_token received character that is not implemented"),
-
         }
     }
 
@@ -181,9 +199,9 @@ impl Scanner {
             self.start = self.current;
             self.scan_token();
         }
-
         self.tokens
-            .push(Token::new(TokenType::Eof, String::from(""),Box::new(0) ,self.line));
+            .push(Token::new(TokenType::Eof, String::from(""),Literal::Null(None) ,self.line));
+        println!("{:?}", self.tokens);
     }
 
     fn is_at_end(&self) -> bool {

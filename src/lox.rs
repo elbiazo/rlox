@@ -14,7 +14,7 @@ impl Lox {
     }
 
     pub fn run(&self, source: String) -> Result<()> {
-        let scanner = scanner::Scanner::new(source);
+        let mut scanner = scanner::Scanner::new(source);
         scanner.scan_tokens();
         Ok(())
     }
