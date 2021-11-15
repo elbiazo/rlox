@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::fmt;
 
 pub enum TokenType {
@@ -100,20 +99,20 @@ impl fmt::Debug for TokenType {
     }
 }
 
-pub struct Token<T> {
+pub struct Token {
     tok_type: TokenType,
     lexme: String,
-    literal: T,
+    literal: Literal,
     line: usize,
 }
 
-impl<T> fmt::Debug for Token<T> {
+impl fmt::Debug for Token {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{:?} {} {}", self.tok_type, self.lexme, self.line)
+        write!(fmt, "type: {:?}\tlexme: {}\tliteral: {:?}\tline: {}", self.tok_type, self.lexme, self.literal, self.line)
     }
 }
-impl<T> Token<T> {
-    pub fn new(tok_type: TokenType, lexme: String, literal: T, line: usize) -> Token<T> {
+impl Token {
+    pub fn new(tok_type: TokenType, lexme: String, literal: Literal, line: usize) -> Token {
         Token {
             tok_type,
             lexme,
@@ -122,10 +121,10 @@ impl<T> Token<T> {
         }
     }
 }
-enum Literal {
+pub enum Literal {
     Null(Option<()>),
     Str(String),
-    Int(usize),
+    Int(f64),
 }
 impl fmt::Debug for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -142,7 +141,7 @@ pub struct Scanner {
     current: usize,
     start: usize,
     line: usize,
-    tokens: Vec<Token<Literal>>,
+    tokens: Vec<Token>,
 }
 
 impl Scanner {
@@ -242,10 +241,63 @@ impl Scanner {
                 }
             }
 
+            ' ' => (),
+            '\r' => (),
+            '\t' => (),
+            '\n' => self.line += 1,
+
+            '"' => self.string(),
+
+
             // Operator
-            _ => assert!(false, "Unimplemented token at line: {}", self.line),
+            _ => if self.is_digit(c) {
+                self.number();
+            } else {
+                assert!(false, "Unimplemented token at line: {}", self.line);
+            }
         }
         println!("{:?}", self.tokens);
+    }
+    fn number(&mut self) {
+        while self.is_digit(self.peek()) {
+            self.advance();
+        }
+
+        if self.peek() == '.' && self.is_digit(self.peek_next()){
+            self.advance();
+            while self.is_digit(self.peek()) {
+                self.advance();
+            }
+        }
+        self.add_token_lit(TokenType::Number, Literal::Int(self.source[self.start..self.current].parse::<f64>().expect("Not a number")));
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.chars().count() {
+            return '\0';
+        }
+
+        self.source.chars().nth(self.current + 1).unwrap()
+    }
+
+    fn is_digit(&self, c: char) -> bool {
+        c >= '0' && c <= '9'
+    }
+
+    fn string(&mut self) {
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+        if self.is_at_end() {
+            assert!(false, "Unterminated string at line {}", self.line);
+        }
+        self.advance();
+
+        let value: Literal = Literal::Str(String::from(&self.source[self.start+1..self.current-1]));
+        self.add_token_lit(TokenType::String, value);
     }
 
     fn peek(&self) -> char {
