@@ -175,6 +175,19 @@ impl Scanner {
         self.tokens.push(Token::new(tok_type, text, lit, self.line));
     }
 
+    fn match_next(&mut self, expected: char) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
+
+        if self.source.chars().nth(self.current).unwrap() != expected {
+            return false;
+        }
+
+        self.current += 1;
+
+        true
+    }
     fn scan_token(&mut self) {
         let c = self.advance();
         match c {
@@ -188,13 +201,60 @@ impl Scanner {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::SemiColon),
             '*' => self.add_token(TokenType::Star),
-            _ => assert!(
-                true,
-                "scan_token received character that is not implemented"
-            ),
+
+            // Operators
+            '!' => {
+                if self.match_next('=') {
+                    self.add_token(TokenType::BangEqual)
+                } else {
+                    self.add_token(TokenType::Bang)
+                }
+            }
+            '=' => {
+                if self.match_next('=') {
+                    self.add_token(TokenType::EqualEqual)
+                } else {
+                    self.add_token(TokenType::Equal)
+                }
+            }
+            '<' => {
+                if self.match_next('=') {
+                    self.add_token(TokenType::LessEqual)
+                } else {
+                    self.add_token(TokenType::Less)
+                }
+            }
+            '>' => {
+                if self.match_next('=') {
+                    self.add_token(TokenType::GreaterEqual)
+                } else {
+                    self.add_token(TokenType::Greater)
+                }
+            }
+
+            '/' => {
+                if self.match_next('/') {
+                    while self.peek() != '\n' && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
+                }
+            }
+
+            // Operator
+            _ => assert!(false, "Unimplemented token at line: {}", self.line),
         }
+        println!("{:?}", self.tokens);
     }
 
+    fn peek(&self) -> char {
+        if self.is_at_end() {
+            return '\0';
+        }
+
+        self.source.chars().nth(self.current).unwrap()
+    }
     pub fn scan_tokens(&mut self) {
         while !self.is_at_end() {
             self.start = self.current;
@@ -206,7 +266,6 @@ impl Scanner {
             Literal::Null(None),
             self.line,
         ));
-        println!("{:?}", self.tokens);
     }
 
     fn is_at_end(&self) -> bool {

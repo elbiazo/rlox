@@ -30,9 +30,9 @@ impl Lox {
         }
     }
 
-    fn error(&mut self, line: u32, err: String, msg: String) {
+    fn error(&mut self, line: u32, msg: String) {
         self.had_err = true;
-        let error = logger::Error { line, err, msg };
+        let error = logger::Error { line, msg };
         error.report();
     }
 }
