@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::fmt;
-
+#[derive(Copy, Clone)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -108,7 +109,11 @@ pub struct Token {
 
 impl fmt::Debug for Token {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "type: {:?}\tlexme: {}\tliteral: {:?}\tline: {}", self.tok_type, self.lexme, self.literal, self.line)
+        write!(
+            fmt,
+            "type: {:?}\tlexme: {}\tliteral: {:?}\tline: {}",
+            self.tok_type, self.lexme, self.literal, self.line
+        )
     }
 }
 impl Token {
@@ -142,16 +147,37 @@ pub struct Scanner {
     start: usize,
     line: usize,
     tokens: Vec<Token>,
+    keywords: HashMap<String, TokenType>,
 }
 
 impl Scanner {
     pub fn new(source: String) -> Self {
+        let mut keywords: HashMap<String, TokenType> = HashMap::new();
+        keywords.insert("and".to_string(), TokenType::And);
+        keywords.insert("and".to_string(), TokenType::And);
+        keywords.insert("class".to_string(), TokenType::Class);
+        keywords.insert("else".to_string(), TokenType::Else);
+        keywords.insert("false".to_string(), TokenType::False);
+        keywords.insert("for".to_string(), TokenType::For);
+        keywords.insert("fun".to_string(), TokenType::Fun);
+        keywords.insert("if".to_string(), TokenType::If);
+        keywords.insert("nil".to_string(), TokenType::Nil);
+        keywords.insert("or".to_string(), TokenType::Or);
+        keywords.insert("print".to_string(), TokenType::Print);
+        keywords.insert("return".to_string(), TokenType::Return);
+        keywords.insert("super".to_string(), TokenType::Super);
+        keywords.insert("this".to_string(), TokenType::This);
+        keywords.insert("true".to_string(), TokenType::True);
+        keywords.insert("var".to_string(), TokenType::Var);
+        keywords.insert("while".to_string(), TokenType::While);
+
         Scanner {
             source: source,
             current: 0,
             start: 0,
             line: 1,
             tokens: Vec::new(),
+            keywords: keywords,
         }
     }
 
@@ -248,28 +274,61 @@ impl Scanner {
 
             '"' => self.string(),
 
-
             // Operator
-            _ => if self.is_digit(c) {
-                self.number();
-            } else {
-                assert!(false, "Unimplemented token at line: {}", self.line);
+            _ => {
+                if self.is_digit(c) {
+                    self.number();
+                } else if self.is_alpha(c) {
+                    self.identifier();
+                } else {
+                    assert!(false, "Unimplemented token at line: {}", self.line);
+                }
             }
         }
         println!("{:?}", self.tokens);
     }
+
+    fn identifier(&mut self) {
+        while self.is_alpha_numeric(self.peek()) {
+            self.advance();
+        }
+
+        let text: String = String::from(&self.source[self.start..self.current]);
+        let tok_type: TokenType;
+        match self.keywords.get(text.as_str()) {
+            Some(t_type) => tok_type = *t_type,
+            None => tok_type = TokenType::Identifier,
+        }
+        self.add_token(tok_type);
+    }
+
+    fn is_alpha_numeric(&self, c: char) -> bool {
+        self.is_alpha(c) || self.is_digit(c)
+    }
+
+    fn is_alpha(&self, c: char) -> bool {
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+    }
+
     fn number(&mut self) {
         while self.is_digit(self.peek()) {
             self.advance();
         }
 
-        if self.peek() == '.' && self.is_digit(self.peek_next()){
+        if self.peek() == '.' && self.is_digit(self.peek_next()) {
             self.advance();
             while self.is_digit(self.peek()) {
                 self.advance();
             }
         }
-        self.add_token_lit(TokenType::Number, Literal::Int(self.source[self.start..self.current].parse::<f64>().expect("Not a number")));
+        self.add_token_lit(
+            TokenType::Number,
+            Literal::Int(
+                self.source[self.start..self.current]
+                    .parse::<f64>()
+                    .expect("Not a number"),
+            ),
+        );
     }
 
     fn peek_next(&self) -> char {
@@ -296,7 +355,8 @@ impl Scanner {
         }
         self.advance();
 
-        let value: Literal = Literal::Str(String::from(&self.source[self.start+1..self.current-1]));
+        let value: Literal =
+            Literal::Str(String::from(&self.source[self.start + 1..self.current - 1]));
         self.add_token_lit(TokenType::String, value);
     }
 
