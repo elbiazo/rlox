@@ -152,24 +152,6 @@ pub struct Scanner {
 
 impl Scanner {
     pub fn new(source: String) -> Self {
-        let mut keywords: HashMap<String, TokenType> = HashMap::new();
-        keywords.insert("and".to_string(), TokenType::And);
-        keywords.insert("and".to_string(), TokenType::And);
-        keywords.insert("class".to_string(), TokenType::Class);
-        keywords.insert("else".to_string(), TokenType::Else);
-        keywords.insert("false".to_string(), TokenType::False);
-        keywords.insert("for".to_string(), TokenType::For);
-        keywords.insert("fun".to_string(), TokenType::Fun);
-        keywords.insert("if".to_string(), TokenType::If);
-        keywords.insert("nil".to_string(), TokenType::Nil);
-        keywords.insert("or".to_string(), TokenType::Or);
-        keywords.insert("print".to_string(), TokenType::Print);
-        keywords.insert("return".to_string(), TokenType::Return);
-        keywords.insert("super".to_string(), TokenType::Super);
-        keywords.insert("this".to_string(), TokenType::This);
-        keywords.insert("true".to_string(), TokenType::True);
-        keywords.insert("var".to_string(), TokenType::Var);
-        keywords.insert("while".to_string(), TokenType::While);
 
         Scanner {
             source: source,
@@ -177,7 +159,25 @@ impl Scanner {
             start: 0,
             line: 1,
             tokens: Vec::new(),
-            keywords: keywords,
+            keywords: vec![
+                ("and", TokenType::And),
+                ("class", TokenType::Class),
+                ("else", TokenType::Else),
+                ("false", TokenType::False),
+                ("for", TokenType::For),
+                ("fun", TokenType::Fun),
+                ("if", TokenType::If),
+                ("nil", TokenType::Nil),
+                ("or", TokenType::Or),
+                ("print", TokenType::Print),
+                ("return", TokenType::Return),
+                ("super", TokenType::Super),
+                ("this", TokenType::This),
+                ("true", TokenType::True),
+                ("var", TokenType::Var),
+                ("while", TokenType::While),
+                ]
+                .into_iter().map(|(k, v)| (String::from(k), v)).collect(),
         }
     }
 
@@ -367,7 +367,7 @@ impl Scanner {
 
         self.source.chars().nth(self.current).unwrap()
     }
-    pub fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) -> Option<()>{
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
@@ -378,6 +378,8 @@ impl Scanner {
             Literal::Null(None),
             self.line,
         ));
+
+        Some(())
     }
 
     fn is_at_end(&self) -> bool {

@@ -2,6 +2,8 @@ extern crate clap;
 use clap::{App, Arg};
 
 mod lox;
+mod logger;
+mod scanner;
 
 fn main() {
     let matches = App::new("rlox")

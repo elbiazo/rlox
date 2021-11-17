@@ -2,19 +2,22 @@ use std::fs::read;
 use std::io;
 use std::io::prelude::*;
 use std::io::Result;
-mod logger;
-mod scanner;
+use crate::logger::Error;
+use crate::scanner::Scanner;
 pub struct Lox {
-    had_err: bool,
+    had_err: Error,
 }
 
 impl Lox {
     pub fn new() -> Lox {
-        Lox { had_err: false }
+        Lox { had_err: Error {
+            line: 0,
+            msg: String::new()
+        } }
     }
 
     pub fn run(&self, source: String) -> Result<()> {
-        let mut scanner = scanner::Scanner::new(source);
+        let mut scanner = Scanner::new(source);
         scanner.scan_tokens();
         Ok(())
     }
@@ -30,9 +33,4 @@ impl Lox {
         }
     }
 
-    fn error(&mut self, line: u32, msg: String) {
-        self.had_err = true;
-        let error = logger::Error { line, msg };
-        error.report();
-    }
 }
