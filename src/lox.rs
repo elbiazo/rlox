@@ -1,24 +1,21 @@
+use crate::scanner::Scanner;
 use std::fs::read;
 use std::io;
 use std::io::prelude::*;
 use std::io::Result;
-use crate::logger::Error;
-use crate::scanner::Scanner;
-pub struct Lox {
-    had_err: Error,
-}
+pub struct Lox;
 
 impl Lox {
     pub fn new() -> Lox {
-        Lox { had_err: Error {
-            line: 0,
-            msg: String::new()
-        } }
+        Lox
     }
 
     pub fn run(&self, source: String) -> Result<()> {
         let mut scanner = Scanner::new(source);
-        scanner.scan_tokens();
+        match scanner.scan_tokens() {
+            Err(()) => return Ok(()),
+            _ => (),
+        }
         Ok(())
     }
     pub fn run_file(&self, path: &str) -> Result<()> {
@@ -32,5 +29,4 @@ impl Lox {
             self.run(line.unwrap()).unwrap();
         }
     }
-
 }

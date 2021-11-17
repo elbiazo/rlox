@@ -1,5 +1,8 @@
+use crate::logger::{Error, Report};
 use std::collections::HashMap;
 use std::fmt;
+use std::io;
+
 #[derive(Copy, Clone)]
 pub enum TokenType {
     // Single-character tokens.
@@ -137,10 +140,16 @@ impl fmt::Debug for Literal {
             Literal::Null(_) => write!(f, "None"),
             Literal::Str(s) => write!(f, "{}", s),
             Literal::Int(i) => write!(f, "{}", i),
-            _ => write!(f, ""),
         }
     }
 }
+
+impl Report for Scanner {
+    fn report(&self, err: &Error) {
+        println!("[{}] Error: {}", err.line, err.msg);
+    }
+}
+
 pub struct Scanner {
     pub source: String,
     current: usize,
@@ -148,11 +157,13 @@ pub struct Scanner {
     line: usize,
     tokens: Vec<Token>,
     keywords: HashMap<String, TokenType>,
+    err: Option<Error>,
 }
+
+
 
 impl Scanner {
     pub fn new(source: String) -> Self {
-
         Scanner {
             source: source,
             current: 0,
@@ -176,8 +187,11 @@ impl Scanner {
                 ("true", TokenType::True),
                 ("var", TokenType::Var),
                 ("while", TokenType::While),
-                ]
-                .into_iter().map(|(k, v)| (String::from(k), v)).collect(),
+            ]
+            .into_iter()
+            .map(|(k, v)| (String::from(k), v))
+            .collect(),
+            err: None,
         }
     }
 
@@ -281,11 +295,14 @@ impl Scanner {
                 } else if self.is_alpha(c) {
                     self.identifier();
                 } else {
-                    assert!(false, "Unimplemented token at line: {}", self.line);
+                    self.err = Some(Error {
+                        line: self.line,
+                        msg: "Unimplemented token".to_string(),
+                    });
+
                 }
             }
         }
-        println!("{:?}", self.tokens);
     }
 
     fn identifier(&mut self) {
@@ -351,7 +368,10 @@ impl Scanner {
             self.advance();
         }
         if self.is_at_end() {
-            assert!(false, "Unterminated string at line {}", self.line);
+            self.err = Some(Error{
+                line: self.line,
+                msg: "Unterminated string".to_string(),
+            });
         }
         self.advance();
 
@@ -367,19 +387,27 @@ impl Scanner {
 
         self.source.chars().nth(self.current).unwrap()
     }
-    pub fn scan_tokens(&mut self) -> Option<()>{
+    pub fn scan_tokens(&mut self) -> Result<(),()> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
         }
-        self.tokens.push(Token::new(
-            TokenType::Eof,
-            String::from(""),
-            Literal::Null(None),
-            self.line,
-        ));
+        match &self.err {
+            Some(err) => {
+                self.report(err);
+                return Err(());
+            }
+            None => {
+                self.tokens.push(Token::new(
+                    TokenType::Eof,
+                    String::from(""),
+                    Literal::Null(None),
+                    self.line,
+                ));
+            }
+        }
 
-        Some(())
+        Ok(())
     }
 
     fn is_at_end(&self) -> bool {

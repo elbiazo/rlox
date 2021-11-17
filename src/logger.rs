@@ -1,10 +1,8 @@
 pub struct Error {
-    pub line: u32,
+    pub line: usize,
     pub msg: String,
 }
 
-impl Error {
-    pub fn report(&self) {
-        println!("[{}] Error: {}", self.line, self.msg);
-    }
+pub trait Report {
+    fn report(&self, err: &Error);
 }
