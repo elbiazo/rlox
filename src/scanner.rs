@@ -1,8 +1,7 @@
+use crate::expr::Literal;
 use crate::logger::{Error, Report};
 use std::collections::HashMap;
 use std::fmt;
-use std::io;
-
 #[derive(Copy, Clone)]
 pub enum TokenType {
     // Single-character tokens.
@@ -112,13 +111,14 @@ pub struct Token {
 
 impl fmt::Debug for Token {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(
+        writeln!(
             fmt,
-            "type: {:?}\tlexme: {}\tliteral: {:?}\tline: {}",
+            "\n\ttype: {:?}\n\tlexme: {}\n\tliteral: {:?}\n\tline: {}",
             self.tok_type, self.lexme, self.literal, self.line
         )
     }
 }
+
 impl Token {
     pub fn new(tok_type: TokenType, lexme: String, literal: Literal, line: usize) -> Token {
         Token {
@@ -126,20 +126,6 @@ impl Token {
             lexme,
             literal,
             line,
-        }
-    }
-}
-pub enum Literal {
-    Null(Option<()>),
-    Str(String),
-    Int(f64),
-}
-impl fmt::Debug for Literal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Literal::Null(_) => write!(f, "None"),
-            Literal::Str(s) => write!(f, "{}", s),
-            Literal::Int(i) => write!(f, "{}", i),
         }
     }
 }
@@ -155,12 +141,10 @@ pub struct Scanner {
     current: usize,
     start: usize,
     line: usize,
-    tokens: Vec<Token>,
+    pub tokens: Vec<Token>,
     keywords: HashMap<String, TokenType>,
     err: Option<Error>,
 }
-
-
 
 impl Scanner {
     pub fn new(source: String) -> Self {
@@ -206,7 +190,7 @@ impl Scanner {
     }
 
     fn add_token(&mut self, tok_type: TokenType) {
-        self.add_token_lit(tok_type, Literal::Null(None));
+        self.add_token_lit(tok_type, Literal::Nil);
     }
 
     fn add_token_lit(&mut self, tok_type: TokenType, lit: Literal) {
@@ -299,7 +283,6 @@ impl Scanner {
                         line: self.line,
                         msg: "Unimplemented token".to_string(),
                     });
-
                 }
             }
         }
@@ -340,7 +323,7 @@ impl Scanner {
         }
         self.add_token_lit(
             TokenType::Number,
-            Literal::Int(
+            Literal::Number(
                 self.source[self.start..self.current]
                     .parse::<f64>()
                     .expect("Not a number"),
@@ -368,7 +351,7 @@ impl Scanner {
             self.advance();
         }
         if self.is_at_end() {
-            self.err = Some(Error{
+            self.err = Some(Error {
                 line: self.line,
                 msg: "Unterminated string".to_string(),
             });
@@ -376,7 +359,7 @@ impl Scanner {
         self.advance();
 
         let value: Literal =
-            Literal::Str(String::from(&self.source[self.start + 1..self.current - 1]));
+            Literal::String(String::from(&self.source[self.start + 1..self.current - 1]));
         self.add_token_lit(TokenType::String, value);
     }
 
@@ -387,7 +370,7 @@ impl Scanner {
 
         self.source.chars().nth(self.current).unwrap()
     }
-    pub fn scan_tokens(&mut self) -> Result<(),()> {
+    pub fn scan_tokens(&mut self) -> Result<(), ()> {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
@@ -401,7 +384,7 @@ impl Scanner {
                 self.tokens.push(Token::new(
                     TokenType::Eof,
                     String::from(""),
-                    Literal::Null(None),
+                    Literal::Nil,
                     self.line,
                 ));
             }

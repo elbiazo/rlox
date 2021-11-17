@@ -1,8 +1,10 @@
 extern crate clap;
 use clap::{App, Arg};
 
+mod expr;
 mod logger;
 mod lox;
+mod parser;
 mod scanner;
 
 fn main() {
