@@ -2,12 +2,12 @@ extern crate clap;
 use clap::{App, Arg};
 
 mod expr;
-mod logger;
 mod lox;
 mod parser;
 mod scanner;
 
 fn main() {
+    env_logger::init();
     let matches = App::new("rlox")
         .version("1.0")
         .about("Interpreter for rlox language")

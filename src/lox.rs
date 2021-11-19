@@ -1,5 +1,6 @@
 use crate::parser::Parser;
 use crate::scanner::Scanner;
+use log::{error, info};
 use std::fs::read;
 use std::io;
 use std::io::prelude::*;
@@ -14,9 +15,14 @@ impl Lox {
     pub fn run(&self, source: String) -> Result<()> {
         let mut scanner = Scanner::new(source);
         match scanner.scan_tokens() {
-            Err(()) => return Ok(()),
+            Err(err_msg) => {
+                error!("{}", err_msg);
+                return Ok(());
+            }
             _ => (),
         }
+
+        info!("{:?}", scanner.tokens);
 
         let parser = Parser::new(scanner.tokens);
         parser.parse_tokens().unwrap();

@@ -1,7 +1,7 @@
 use crate::expr::Literal;
-use crate::logger::{Error, Report};
 use std::collections::HashMap;
 use std::fmt;
+use std::io::{Error, ErrorKind};
 #[derive(Copy, Clone)]
 pub enum TokenType {
     // Single-character tokens.
@@ -130,12 +130,6 @@ impl Token {
     }
 }
 
-impl Report for Scanner {
-    fn report(&self, err: &Error) {
-        println!("[{}] Error: {}", err.line, err.msg);
-    }
-}
-
 pub struct Scanner {
     pub source: String,
     current: usize,
@@ -143,7 +137,6 @@ pub struct Scanner {
     line: usize,
     pub tokens: Vec<Token>,
     keywords: HashMap<String, TokenType>,
-    err: Option<Error>,
 }
 
 impl Scanner {
@@ -175,7 +168,6 @@ impl Scanner {
             .into_iter()
             .map(|(k, v)| (String::from(k), v))
             .collect(),
-            err: None,
         }
     }
 
@@ -211,7 +203,7 @@ impl Scanner {
 
         true
     }
-    fn scan_token(&mut self) {
+    fn scan_token(&mut self) -> Result<(), Error> {
         let c = self.advance();
         match c {
             '(' => self.add_token(TokenType::LeftParen),
@@ -270,7 +262,7 @@ impl Scanner {
             '\t' => (),
             '\n' => self.line += 1,
 
-            '"' => self.string(),
+            '"' => self.string()?,
 
             // Operator
             _ => {
@@ -279,13 +271,12 @@ impl Scanner {
                 } else if self.is_alpha(c) {
                     self.identifier();
                 } else {
-                    self.err = Some(Error {
-                        line: self.line,
-                        msg: "Unimplemented token".to_string(),
-                    });
+                    let err_msg = "Unimplemented token";
+                    return Err(Error::new(ErrorKind::Other, err_msg));
                 }
             }
         }
+        Ok(())
     }
 
     fn identifier(&mut self) {
@@ -343,7 +334,7 @@ impl Scanner {
         c >= '0' && c <= '9'
     }
 
-    fn string(&mut self) {
+    fn string(&mut self) -> Result<(), Error> {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
@@ -351,16 +342,15 @@ impl Scanner {
             self.advance();
         }
         if self.is_at_end() {
-            self.err = Some(Error {
-                line: self.line,
-                msg: "Unterminated string".to_string(),
-            });
+            let err_msg = "Unterminated string";
+            return Err(Error::new(ErrorKind::Other, err_msg));
         }
         self.advance();
 
         let value: Literal =
             Literal::String(String::from(&self.source[self.start + 1..self.current - 1]));
         self.add_token_lit(TokenType::String, value);
+        Ok(())
     }
 
     fn peek(&self) -> char {
@@ -370,25 +360,17 @@ impl Scanner {
 
         self.source.chars().nth(self.current).unwrap()
     }
-    pub fn scan_tokens(&mut self) -> Result<(), ()> {
+    pub fn scan_tokens(&mut self) -> Result<(), Error> {
         while !self.is_at_end() {
             self.start = self.current;
-            self.scan_token();
+            self.scan_token()?;
         }
-        match &self.err {
-            Some(err) => {
-                self.report(err);
-                return Err(());
-            }
-            None => {
-                self.tokens.push(Token::new(
-                    TokenType::Eof,
-                    String::from(""),
-                    Literal::Nil,
-                    self.line,
-                ));
-            }
-        }
+        self.tokens.push(Token::new(
+            TokenType::Eof,
+            String::from(""),
+            Literal::Nil,
+            self.line,
+        ));
 
         Ok(())
     }
