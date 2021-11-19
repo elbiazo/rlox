@@ -103,10 +103,10 @@ impl fmt::Debug for TokenType {
 }
 
 pub struct Token {
-    tok_type: TokenType,
-    lexme: String,
-    literal: Literal,
-    line: usize,
+    pub tok_type: TokenType,
+    pub lexme: String,
+    pub literal: Literal,
+    pub line: usize,
 }
 
 impl fmt::Debug for Token {
