@@ -2,7 +2,7 @@ use crate::expr::Literal;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::{Error, ErrorKind};
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,

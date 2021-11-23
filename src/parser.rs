@@ -32,7 +32,7 @@ impl Parser {
     }
 
     fn is_at_end(&self) -> bool {
-        matches!(self.peek().tok_type, scanner::TokenType::Eof)
+        self.peek().tok_type == scanner::TokenType::Eof
     }
 
     fn check(&self, _ty: scanner::TokenType) -> bool {
@@ -40,7 +40,8 @@ impl Parser {
             return false;
         }
 
-        matches!(self.peek().tok_type, _ty)
+        self.peek().tok_type ==_ty
+        
     }
 
     fn previous(&self) -> &scanner::Token {
@@ -66,7 +67,6 @@ impl Parser {
     fn match_one_of(&mut self, types: Vec<scanner::TokenType>) -> bool {
         for ty in types {
             if self.matches(ty) {
-                error!("match_one_of: {:?}", ty);
                 return true;
             }
         }
@@ -94,7 +94,6 @@ impl Parser {
         }
 
         if self.match_one_of(vec![scanner::TokenType::Number, scanner::TokenType::String]) {
-            error!("TESTSE");
             return Ok(expr::Expr::Literal(self.previous().literal.clone()));
         }
         if self.match_one_of(vec![scanner::TokenType::LeftParen]) {
@@ -105,12 +104,14 @@ impl Parser {
             );
             return Ok(expr::Expr::Grouping(expr));
         } else {
-            return Ok(expr::Expr::Literal(expr::Literal::Nil));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid expression: {:?}", self.peek().tok_type),
+            ));
         }
     }
 
     fn unary(&mut self) -> Result<expr::Expr, io::Error> {
-        println!("peek {:?}", self.peek().tok_type);
         if self.match_one_of(vec![scanner::TokenType::Minus, scanner::TokenType::Bang]) {
             let op = self.previous().clone();
             let right = Box::new(self.unary()?);
@@ -187,7 +188,9 @@ impl Parser {
     }
 
     pub fn parse_tokens(&mut self) -> Result<(), io::Error> {
-        info!("{:?}", self.expression()?);
+        if !self.is_at_end() {
+            println!("expr: {:?}", self.expression()?);
+        }
         Ok(())
     }
 }
