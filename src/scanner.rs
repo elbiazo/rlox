@@ -101,7 +101,7 @@ impl fmt::Debug for TokenType {
         }
     }
 }
-
+#[derive(Clone)]
 pub struct Token {
     pub tok_type: TokenType,
     pub lexme: String,

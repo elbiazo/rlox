@@ -22,9 +22,9 @@ impl Lox {
             _ => (),
         }
 
-        info!("{:?}", scanner.tokens);
+        // info!("{:?}", scanner.tokens);
 
-        let parser = Parser::new(scanner.tokens);
+        let mut parser = Parser::new(scanner.tokens);
         parser.parse_tokens().unwrap();
         Ok(())
     }

@@ -1,5 +1,6 @@
 use crate::expr;
 use crate::scanner;
+use log::{error, info};
 use std::io;
 pub struct Parser {
     current: usize,
@@ -25,101 +26,168 @@ impl Parser {
             tokens: tokens,
         }
     }
-    fn peek(&self) -> Result<scanner::Token, io::Error> {
-        match self.tokens.get(self.current) {
-            Some(token) => Ok(*token),
-            None => Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Unexpected end of input",
-            )),
-        }
+
+    fn peek(&self) -> &scanner::Token {
+        self.tokens.get(self.current).unwrap()
     }
 
-    fn is_at_end(&self) -> Result<bool, io::Error> {
-        match self.peek() {
-            Ok(token) => Ok(matches!(token.tok_type, scanner::TokenType::Eof)),
-            Err(err_msg) => Err(err_msg),
-        }
+    fn is_at_end(&self) -> bool {
+        matches!(self.peek().tok_type, scanner::TokenType::Eof)
     }
 
-    fn check(&self, token: scanner::TokenType) -> Result<bool, io::Error> {
-        self.is_at_end()?;
-
-        match self.peek() {
-            Ok(cur_token) => Ok(matches!(cur_token.tok_type, token)),
-            Err(err_msg) => Err(err_msg),
+    fn check(&self, _ty: scanner::TokenType) -> bool {
+        if self.is_at_end() {
+            return false;
         }
+
+        matches!(self.peek().tok_type, _ty)
     }
 
-    fn previous(&self) -> Result<scanner::Token, io::Error> {
-        match self.tokens.get(self.current - 1) {
-            Some(token) => Ok(*token),
-            None => Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Unexpected end of input",
-            )),
-        }
-    }
-    fn advance(&mut self) -> Result<scanner::Token, io::Error> {
-        match self.is_at_end() {
-            Ok(is_end) => {
-                if !is_end {
-                    self.current += 1;
-                    Ok(self.previous()?)
-                } else {
-                    Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "Unexpected end of input",
-                    ))
-                }
-            }
-            Err(err_msg) => Err(err_msg),
-        }
+    fn previous(&self) -> &scanner::Token {
+        self.tokens.get(self.current - 1).unwrap()
     }
 
-    fn match_one_of(&self, token_types: Vec<scanner::TokenType>) -> Result<bool, io::Error> {
-        for token_type in token_types {
-            match self.check(token_type) {
-                Ok(is_match) => {
-                    if is_match {
-                        return Ok(true);
-                    } 
-                }
-                Err(err_msg) => return Err(err_msg),
+    fn advance(&mut self) -> &scanner::Token {
+        if !self.is_at_end() {
+            self.current += 1
+        }
+
+        self.previous()
+    }
+
+    fn matches(&mut self, ty: scanner::TokenType) -> bool {
+        if self.check(ty) {
+            self.advance();
+            return true;
+        }
+        false
+    }
+
+    fn match_one_of(&mut self, types: Vec<scanner::TokenType>) -> bool {
+        for ty in types {
+            if self.matches(ty) {
+                error!("match_one_of: {:?}", ty);
+                return true;
             }
         }
-
-        Ok(false)
+        false
     }
 
-    fn equality(&mut self) -> Result<expr::Expr, Error> {
-        let mut expr = self.comparison()?;
+    fn consume(&mut self, ty: scanner::TokenType, msg: &str) {
+        if self.check(ty) {
+            self.advance();
+        } else {
+            error!("{}", msg);
+        }
+    }
+
+    fn primary(&mut self) -> Result<expr::Expr, io::Error> {
+        if self.match_one_of(vec![scanner::TokenType::False]) {
+            return Ok(expr::Expr::Literal(expr::Literal::False));
+        }
+        if self.match_one_of(vec![scanner::TokenType::True]) {
+            return Ok(expr::Expr::Literal(expr::Literal::True));
+        }
+
+        if self.match_one_of(vec![scanner::TokenType::Nil]) {
+            return Ok(expr::Expr::Literal(expr::Literal::Nil));
+        }
+
+        if self.match_one_of(vec![scanner::TokenType::Number, scanner::TokenType::String]) {
+            error!("TESTSE");
+            return Ok(expr::Expr::Literal(self.previous().literal.clone()));
+        }
+        if self.match_one_of(vec![scanner::TokenType::LeftParen]) {
+            let expr = Box::new(self.expression()?);
+            self.consume(
+                scanner::TokenType::RightParen,
+                "Expect ')' after expression.",
+            );
+            return Ok(expr::Expr::Grouping(expr));
+        } else {
+            return Ok(expr::Expr::Literal(expr::Literal::Nil));
+        }
+    }
+
+    fn unary(&mut self) -> Result<expr::Expr, io::Error> {
+        println!("peek {:?}", self.peek().tok_type);
+        if self.match_one_of(vec![scanner::TokenType::Minus, scanner::TokenType::Bang]) {
+            let op = self.previous().clone();
+            let right = Box::new(self.unary()?);
+
+            return Ok(expr::Expr::Unary(op, right));
+        }
+
+        self.primary()
+    }
+
+    fn factor(&mut self) -> Result<expr::Expr, io::Error> {
+        let mut expr = self.unary()?;
+
+        while self.match_one_of(vec![scanner::TokenType::Slash, scanner::TokenType::Star]) {
+            let op = self.previous().clone();
+            let right = Box::new(self.unary()?);
+            let left = Box::new(expr);
+            expr = expr::Expr::Binary(left, op, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn term(&mut self) -> Result<expr::Expr, io::Error> {
+        let mut expr = self.factor()?;
+
+        while self.match_one_of(vec![scanner::TokenType::Minus, scanner::TokenType::Plus]) {
+            let op = self.previous().clone();
+            let right = Box::new(self.factor()?);
+            let left = Box::new(expr);
+            expr = expr::Expr::Binary(left, op, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn comparison(&mut self) -> Result<expr::Expr, io::Error> {
+        // let mut expr = self.addition()?;
+        let mut expr = self.term()?;
 
         while self.match_one_of(vec![
-            scanner::TokenType::BangEqual,
-            scanner::TokenType::EqualEqual,
+            scanner::TokenType::Greater,
+            scanner::TokenType::GreaterEqual,
+            scanner::TokenType::Less,
+            scanner::TokenType::LessEqual,
         ]) {
             let operator_token = self.previous().clone();
-            let right = Box::new(self.comparison()?);
+            // let right = Box::new(self.addition()?);
+            let right = Box::new(self.term()?);
 
-            let binop_maybe = self.op_token_to_binop(&operator_token);
-
-            match binop_maybe {
-                Ok(binop) => {
-                    let lef = Box::new(expr);
-                    expr = expr::Expr::Binary(left, binop, right);
-                }
-                Err(err) => return Err(err),
-            }
+            let left = Box::new(expr.clone());
+            expr = expr::Expr::Binary(left, operator_token, right);
         }
         Ok(expr)
     }
 
-    fn expression(&self) -> Result<expr::Expr, Error> {
+    fn equality(&mut self) -> Result<expr::Expr, io::Error> {
+        let mut expr = self.comparison()?;
+        while self.match_one_of(vec![
+            scanner::TokenType::EqualEqual,
+            scanner::TokenType::BangEqual,
+        ]) {
+            let op = self.previous().clone();
+            let right = Box::new(self.comparison()?);
+            let left = Box::new(expr);
+            expr = expr::Expr::Binary(left, op, right);
+        }
+
+        Ok(expr)
+    }
+
+    fn expression(&mut self) -> Result<expr::Expr, io::Error> {
         self.equality()
     }
 
-    pub fn parse_tokens(&self) -> Result<(), io::Error> {
+    pub fn parse_tokens(&mut self) -> Result<(), io::Error> {
+        info!("{:?}", self.expression()?);
         Ok(())
     }
 }
