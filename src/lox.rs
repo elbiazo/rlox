@@ -1,6 +1,6 @@
 use crate::parser::Parser;
 use crate::scanner::Scanner;
-use log::{error, info};
+use log::error;
 use std::fs::read;
 use std::io;
 use std::io::prelude::*;

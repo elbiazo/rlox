@@ -1,6 +1,6 @@
 use crate::expr;
 use crate::scanner;
-use log::{error, info};
+use log::error;
 use std::io;
 pub struct Parser {
     current: usize,
