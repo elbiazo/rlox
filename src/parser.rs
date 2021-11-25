@@ -5,6 +5,7 @@ use std::io;
 pub struct Parser {
     current: usize,
     tokens: Vec<scanner::Token>,
+    pub expr: Option<expr::Expr>,
 }
 /*
 expression     → literal
@@ -24,6 +25,7 @@ impl Parser {
         Parser {
             current: 0,
             tokens: tokens,
+            expr: None,
         }
     }
 
@@ -40,8 +42,7 @@ impl Parser {
             return false;
         }
 
-        self.peek().tok_type ==_ty
-        
+        self.peek().tok_type == _ty
     }
 
     fn previous(&self) -> &scanner::Token {
@@ -189,7 +190,12 @@ impl Parser {
 
     pub fn parse_tokens(&mut self) -> Result<(), io::Error> {
         if !self.is_at_end() {
-            println!("expr: {:?}", self.expression()?);
+            match self.expression() {
+                Ok(expr) => {
+                    self.expr = Some(expr);
+                }
+                Err(err_msg) => return Err(err_msg),
+            }
         }
         Ok(())
     }

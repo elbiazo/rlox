@@ -1,5 +1,6 @@
 use crate::parser::Parser;
 use crate::scanner::Scanner;
+use crate::interpreter::Interpreter;
 use log::error;
 use std::fs::read;
 use std::io;
@@ -17,7 +18,6 @@ impl Lox {
         match scanner.scan_tokens() {
             Err(err_msg) => {
                 error!("{}", err_msg);
-                return Ok(());
             }
             _ => (),
         }
@@ -25,7 +25,25 @@ impl Lox {
         // info!("{:?}", scanner.tokens);
 
         let mut parser = Parser::new(scanner.tokens);
-        parser.parse_tokens().unwrap();
+        match parser.parse_tokens() {
+            Err(err_msg) => {
+                error!("{}", err_msg);
+            }
+            _ => (),
+        }
+
+        match parser.expr {
+            Some(expr) => {
+                let interpreter = Interpreter::new();
+                match interpreter.visit_expr(expr) {
+                    Ok(val) => println!("{:?}", val),
+                    Err(err_msg) => error!("{}", err_msg),
+                }
+            }
+            _ => ()
+        }
+
+
         Ok(())
     }
     pub fn run_file(&self, path: &str) -> Result<()> {

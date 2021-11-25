@@ -2,6 +2,7 @@ extern crate clap;
 use clap::{App, Arg};
 
 mod expr;
+mod interpreter;
 mod lox;
 mod parser;
 mod scanner;
