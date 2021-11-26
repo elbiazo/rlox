@@ -24,29 +24,42 @@ impl Interpreter {
         }
     }
 
-    fn visit_binary_expr(&self, left: expr::Expr, op: scanner::Token, right: expr::Expr) -> Result<Value, &str> {
-        let left_val: f64 = match self.visit_expr(left){
+    fn visit_binary_expr(
+        &self,
+        left: expr::Expr,
+        op: scanner::Token,
+        right: expr::Expr,
+    ) -> Result<Value, &str> {
+        match self.visit_expr(left) {
             Ok(val) => match val {
-                Value::Number(num) => num,
-                _ => return Err("Binary expr needs to be f64"),
-            }
+                Value::Number(left_val) => match self.visit_expr(right) {
+                    Ok(val) => match val {
+                        Value::Number(right_val) => match op.tok_type {
+                            scanner::TokenType::Plus => Ok(Value::Number(left_val + right_val)),
+                            scanner::TokenType::Minus => Ok(Value::Number(left_val - right_val)),
+                            scanner::TokenType::Slash => Ok(Value::Number(left_val / right_val)),
+                            scanner::TokenType::Star => Ok(Value::Number(left_val * right_val)),
+                            _ => return Err("Unsuppored binary expr"),
+                        },
+                        _ => return Err("Binary expr needs f64"),
+                    },
+                    Err(msg) => return Err(msg),
+                },
+                Value::String(left_val) => match self.visit_expr(right) {
+                    Ok(val) => match val {
+                        Value::String(right_val) => match op.tok_type {
+                            scanner::TokenType::Plus => {
+                                Ok(Value::String(format!("{}{}",left_val, right_val)))
+                            }
+                            _ => return Err("Unsuppored binary expr"),
+                        },
+                        _ => return Err("Binary expr needs String"),
+                    },
+                        _ => return Err("Binary expr needs String"),
+                },
+                _ => return Err("Binary expr needs f64"),
+            },
             Err(msg) => return Err(msg),
-        };
-
-        let right_val: f64 = match self.visit_expr(right){
-            Ok(val) => match val {
-                Value::Number(num) => num,
-                _ => return Err("Binary expr needs to be f64"),
-            }
-            Err(msg) => return Err(msg),
-        };
-
-        match op.tok_type {
-            scanner::TokenType::Plus => Ok(Value::Number(left_val + right_val)),
-            scanner::TokenType::Minus => Ok(Value::Number(left_val - right_val)),
-            scanner::TokenType::Slash => Ok(Value::Number(left_val / right_val)),
-            scanner::TokenType::Star => Ok(Value::Number(left_val * right_val)),
-            _ => Err("Unsuppored binary expr")
         }
     }
 
