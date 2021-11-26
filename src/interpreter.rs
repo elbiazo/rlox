@@ -32,6 +32,7 @@ impl Interpreter {
     ) -> Result<Value, &str> {
         match self.visit_expr(left) {
             Ok(val) => match val {
+                // Checking Number op Number
                 Value::Number(left_val) => match self.visit_expr(right) {
                     Ok(val) => match val {
                         Value::Number(right_val) => match op.tok_type {
@@ -39,24 +40,38 @@ impl Interpreter {
                             scanner::TokenType::Minus => Ok(Value::Number(left_val - right_val)),
                             scanner::TokenType::Slash => Ok(Value::Number(left_val / right_val)),
                             scanner::TokenType::Star => Ok(Value::Number(left_val * right_val)),
+                            // Comparison Operator
+                            scanner::TokenType::Greater => Ok(Value::Bool(left_val > right_val)),
+                            scanner::TokenType::GreaterEqual => {
+                                Ok(Value::Bool(left_val >= right_val))
+                            }
+                            scanner::TokenType::Less => Ok(Value::Bool(left_val < right_val)),
+                            scanner::TokenType::LessEqual => Ok(Value::Bool(left_val <= right_val)),
+                            scanner::TokenType::BangEqual => Ok(Value::Bool(left_val != right_val)),
+                            scanner::TokenType::EqualEqual => {
+                                Ok(Value::Bool(left_val == right_val))
+                            }
                             _ => return Err("Unsuppored binary expr"),
                         },
                         _ => return Err("Binary expr needs f64"),
                     },
                     Err(msg) => return Err(msg),
                 },
+
+                // Checking String + String
                 Value::String(left_val) => match self.visit_expr(right) {
                     Ok(val) => match val {
                         Value::String(right_val) => match op.tok_type {
                             scanner::TokenType::Plus => {
-                                Ok(Value::String(format!("{}{}",left_val, right_val)))
+                                Ok(Value::String(format!("{}{}", left_val, right_val)))
                             }
                             _ => return Err("Unsuppored binary expr"),
                         },
                         _ => return Err("Binary expr needs String"),
                     },
-                        _ => return Err("Binary expr needs String"),
+                    Err(msg) => return Err(msg),
                 },
+
                 _ => return Err("Binary expr needs f64"),
             },
             Err(msg) => return Err(msg),
