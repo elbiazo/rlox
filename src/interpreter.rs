@@ -20,25 +20,51 @@ impl Interpreter {
             expr::Expr::Literal(lit) => Ok(self.visit_literal_expr(lit)),
             expr::Expr::Grouping(e) => self.visit_expr(*e),
             expr::Expr::Unary(op, e) => self.visit_unary_expr(op.clone(), *e),
-            _ => Err("Not supported visit"),
+            expr::Expr::Binary(left, op, right) => self.visit_binary_expr(*left, op, *right),
+        }
+    }
+
+    fn visit_binary_expr(&self, left: expr::Expr, op: scanner::Token, right: expr::Expr) -> Result<Value, &str> {
+        let left_val: f64 = match self.visit_expr(left){
+            Ok(val) => match val {
+                Value::Number(num) => num,
+                _ => return Err("Binary expr needs to be f64"),
+            }
+            Err(msg) => return Err(msg),
+        };
+
+        let right_val: f64 = match self.visit_expr(right){
+            Ok(val) => match val {
+                Value::Number(num) => num,
+                _ => return Err("Binary expr needs to be f64"),
+            }
+            Err(msg) => return Err(msg),
+        };
+
+        match op.tok_type {
+            scanner::TokenType::Plus => Ok(Value::Number(left_val + right_val)),
+            scanner::TokenType::Minus => Ok(Value::Number(left_val - right_val)),
+            scanner::TokenType::Slash => Ok(Value::Number(left_val / right_val)),
+            scanner::TokenType::Star => Ok(Value::Number(left_val * right_val)),
+            _ => Err("Unsuppored binary expr")
         }
     }
 
     pub fn visit_unary_expr(&self, op: scanner::Token, e: expr::Expr) -> Result<Value, &str> {
-        let right = match self.visit_expr(e) {
-            Ok(val) => {
-                match val {
-                    Value::Number(num) => num,
-                    _ => return Err("Right is not a number"),
-                }
+        match self.visit_expr(e) {
+            Ok(val) => match val {
+                Value::Number(num) => match op.tok_type {
+                    scanner::TokenType::Minus => Ok(Value::Number(-num)),
+                    scanner::TokenType::Plus => Ok(Value::Number(num)),
+                    scanner::TokenType::Bang => Ok(Value::Bool(false)),
+                    _ => Err("Op type is not minus or plus"),
+                },
+                _ => match op.tok_type {
+                    scanner::TokenType::Bang => Ok(Value::Bool(false)),
+                    _ => Err("Right is not a number"),
+                },
             },
             Err(err) => return Err(err),
-        };
-
-        match op.tok_type {
-            scanner::TokenType::Minus => Ok(Value::Number(-right)),
-            scanner::TokenType::Plus => Ok(Value::Number(right)),
-            _ => Err("Op type is not minus or plus"),
         }
     }
     pub fn visit_literal_expr(&self, lit: expr::Literal) -> Value {

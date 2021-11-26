@@ -1,6 +1,6 @@
+use crate::interpreter::Interpreter;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
-use crate::interpreter::Interpreter;
 use log::error;
 use std::fs::read;
 use std::io;
@@ -32,6 +32,7 @@ impl Lox {
             _ => (),
         }
 
+        println!("{:?}", parser.expr);
         match parser.expr {
             Some(expr) => {
                 let interpreter = Interpreter::new();
@@ -40,9 +41,8 @@ impl Lox {
                     Err(err_msg) => error!("{}", err_msg),
                 }
             }
-            _ => ()
+            _ => (),
         }
-
 
         Ok(())
     }
