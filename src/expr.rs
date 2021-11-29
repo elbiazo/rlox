@@ -19,4 +19,5 @@ pub enum Literal {
 pub enum Stmt {
     Print(Expr),
     Expr(Expr),
+    Var(String, Expr),
 }

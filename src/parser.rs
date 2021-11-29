@@ -1,7 +1,7 @@
 use crate::expr;
-use crate::interpreter::Interpreter;
+
 use crate::scanner;
-use log::{error, info};
+
 use std::io;
 pub struct Parser {
     current: usize,
@@ -47,11 +47,11 @@ impl Parser {
         self.peek().tok_type == _ty
     }
 
-    fn previous(&self) -> &scanner::Token {
-        self.tokens.get(self.current - 1).unwrap()
+    fn previous(&self) -> scanner::Token {
+        self.tokens.get(self.current - 1).unwrap().clone()
     }
 
-    fn advance(&mut self) -> &scanner::Token {
+    fn advance(&mut self) -> scanner::Token {
         if !self.is_at_end() {
             self.current += 1
         }
@@ -76,11 +76,11 @@ impl Parser {
         false
     }
 
-    fn consume(&mut self, ty: scanner::TokenType, msg: &str) {
+    fn consume(&mut self, ty: scanner::TokenType, msg: &str) -> Result<scanner::Token, io::Error> {
         if self.check(ty) {
-            self.advance();
+            return Ok(self.advance());
         } else {
-            error!("{}", msg);
+            return Err(io::Error::new(io::ErrorKind::Other, msg));
         }
     }
 
@@ -104,7 +104,7 @@ impl Parser {
             self.consume(
                 scanner::TokenType::RightParen,
                 "Expect ')' after expression.",
-            );
+            )?;
             return Ok(expr::Expr::Grouping(expr));
         } else {
             return Err(io::Error::new(
@@ -191,28 +191,56 @@ impl Parser {
     }
     fn expression_statement(&mut self) -> Result<expr::Stmt, io::Error> {
         let expr = self.expression()?;
-        self.consume(scanner::TokenType::SemiColon, "Expected ; after value");
+        self.consume(scanner::TokenType::SemiColon, "Expected ; after value")?;
         Ok(expr::Stmt::Expr(expr))
     }
     fn print_statement(&mut self) -> Result<expr::Stmt, io::Error> {
         let expr = self.expression()?;
-        self.consume(scanner::TokenType::SemiColon, "Expected ; after value");
+        self.consume(scanner::TokenType::SemiColon, "Expected ; after value")?;
         Ok(expr::Stmt::Print(expr))
     }
     fn statement(&mut self) -> Result<expr::Stmt, io::Error> {
-        if self.matches(scanner::TokenType::Print) {
+        if self.match_one_of(vec![scanner::TokenType::Print]) {
             return self.print_statement();
         }
 
         self.expression_statement()
     }
+    fn var_declaration(&mut self) -> Result<expr::Stmt, io::Error> {
+        let name = self.consume(
+            scanner::TokenType::Identifier,
+            "Expected Identifier in var decl",
+        )?;
+        let initializer = match self.match_one_of(vec![scanner::TokenType::Equal]) {
+            true => self.expression()?,
+            false => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "Var decl requires it to match to eqauls",
+                ))
+            }
+        };
 
-    pub fn parse(&mut self) -> Result<Vec::<expr::Stmt>, io::Error> {
+        self.consume(scanner::TokenType::SemiColon, "Expected ; after var decl")?;
+
+        Ok(expr::Stmt::Var(name.lexme, initializer))
+    }
+    fn declaration(&mut self) -> Result<expr::Stmt, io::Error> {
+        if self.match_one_of(vec![scanner::TokenType::Var]) {
+            return self.var_declaration();
+        } else {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Declaration needs token var",
+            ));
+        }
+    }
+
+    pub fn parse(&mut self) -> Result<Vec<expr::Stmt>, io::Error> {
         let mut stmts = Vec::<expr::Stmt>::new();
         while !self.is_at_end() {
-            stmts.push(self.statement()?);
+            stmts.push(self.declaration()?);
         }
-         
         Ok(stmts)
     }
 }

@@ -112,6 +112,7 @@ impl Interpreter {
             Ok(val) => match val {
                 Value::String(string) => println!("{}", string),
                 Value::Number(num) => println!("{}", num),
+                Value::Bool(boolean) => println!("{}", boolean),
                 _ => {
                     return Err(Error::new(
                         ErrorKind::Other,
