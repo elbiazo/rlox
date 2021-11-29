@@ -1,12 +1,14 @@
 use crate::expr;
+use crate::interpreter::Interpreter;
 use crate::scanner;
-use log::error;
+use log::{error, info};
 use std::io;
 pub struct Parser {
     current: usize,
     tokens: Vec<scanner::Token>,
-    pub expr: Option<expr::Expr>,
+    pub exprs: Vec<expr::Expr>,
 }
+
 /*
 expression     → literal
                | unary
@@ -25,7 +27,7 @@ impl Parser {
         Parser {
             current: 0,
             tokens: tokens,
-            expr: None,
+            exprs: Vec::new(),
         }
     }
 
@@ -33,7 +35,7 @@ impl Parser {
         self.tokens.get(self.current).unwrap()
     }
 
-    fn is_at_end(&self) -> bool {
+    pub fn is_at_end(&self) -> bool {
         self.peek().tok_type == scanner::TokenType::Eof
     }
 
@@ -187,16 +189,30 @@ impl Parser {
     fn expression(&mut self) -> Result<expr::Expr, io::Error> {
         self.equality()
     }
-
-    pub fn parse_tokens(&mut self) -> Result<(), io::Error> {
-        if !self.is_at_end() {
-            match self.expression() {
-                Ok(expr) => {
-                    self.expr = Some(expr);
-                }
-                Err(err_msg) => return Err(err_msg),
-            }
+    fn expression_statement(&mut self) -> Result<expr::Stmt, io::Error> {
+        let expr = self.expression()?;
+        self.consume(scanner::TokenType::SemiColon, "Expected ; after value");
+        Ok(expr::Stmt::Expr(expr))
+    }
+    fn print_statement(&mut self) -> Result<expr::Stmt, io::Error> {
+        let expr = self.expression()?;
+        self.consume(scanner::TokenType::SemiColon, "Expected ; after value");
+        Ok(expr::Stmt::Print(expr))
+    }
+    fn statement(&mut self) -> Result<expr::Stmt, io::Error> {
+        if self.matches(scanner::TokenType::Print) {
+            return self.print_statement();
         }
-        Ok(())
+
+        self.expression_statement()
+    }
+
+    pub fn parse(&mut self) -> Result<Vec::<expr::Stmt>, io::Error> {
+        let mut stmts = Vec::<expr::Stmt>::new();
+        while !self.is_at_end() {
+            stmts.push(self.statement()?);
+        }
+         
+        Ok(stmts)
     }
 }

@@ -6,6 +6,7 @@ use std::fs::read;
 use std::io;
 use std::io::prelude::*;
 use std::io::Result;
+use crate::expr;
 pub struct Lox;
 
 impl Lox {
@@ -18,6 +19,7 @@ impl Lox {
         match scanner.scan_tokens() {
             Err(err_msg) => {
                 error!("{}", err_msg);
+                return Ok(())
             }
             _ => (),
         }
@@ -25,22 +27,17 @@ impl Lox {
         // info!("{:?}", scanner.tokens);
 
         let mut parser = Parser::new(scanner.tokens);
-        match parser.parse_tokens() {
+        let stmts = match parser.parse() {
+            Ok(stmts) => stmts,
             Err(err_msg) => {
                 error!("{}", err_msg);
+                return Ok(());
             }
-            _ => (),
-        }
+        };
 
-        match parser.expr {
-            Some(expr) => {
-                let interpreter = Interpreter::new();
-                match interpreter.visit_expr(expr) {
-                    Ok(val) => info!("{:?}", val),
-                    Err(err_msg) => error!("{}", err_msg),
-                }
-            }
-            _ => (),
+        let interp = Interpreter::new();
+        for stmt in stmts {
+            interp.visit_stmt(stmt)?
         }
 
         Ok(())

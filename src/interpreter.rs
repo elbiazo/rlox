@@ -1,7 +1,8 @@
 use crate::expr;
 use crate::scanner;
-
 pub struct Interpreter;
+use std::io::{Error, ErrorKind};
+
 #[derive(Debug, Clone)]
 pub enum Value {
     Number(f64),
@@ -102,6 +103,30 @@ impl Interpreter {
             expr::Literal::True => Value::Bool(true),
             expr::Literal::False => Value::Bool(false),
             _ => Value::Nil,
+        }
+    }
+
+    fn visit_print_stmt(&self, expr: expr::Expr) -> Result<(), Error> {
+        let value = self.visit_expr(expr);
+        match value {
+            Ok(val) => match val {
+                Value::String(string) => println!("{}", string),
+                Value::Number(num) => println!("{}", num),
+                _ => {
+                    return Err(Error::new(
+                        ErrorKind::Other,
+                        "print visitor needs string not other value",
+                    ))
+                }
+            },
+            Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
+        }
+        Ok(())
+    }
+    pub fn visit_stmt(&self, stmt: expr::Stmt) -> Result<(), Error> {
+        match stmt {
+            expr::Stmt::Print(expr) => self.visit_print_stmt(expr),
+            _ => Err(Error::new(ErrorKind::Other, "Unimplemnted stmt")),
         }
     }
 }

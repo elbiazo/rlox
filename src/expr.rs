@@ -15,3 +15,8 @@ pub enum Literal {
     False,
     Nil,
 }
+#[derive(Debug, Clone)]
+pub enum Stmt {
+    Print(Expr),
+    Expr(Expr),
+}
