@@ -6,6 +6,7 @@ mod interpreter;
 mod lox;
 mod parser;
 mod scanner;
+mod environment;
 
 fn main() {
     env_logger::init();

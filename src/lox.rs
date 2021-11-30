@@ -34,10 +34,11 @@ impl Lox {
             }
         };
 
-        let interp = Interpreter::new();
+        let mut interp = Interpreter::new();
         for stmt in stmts {
             interp.visit_stmt(stmt)?
         }
+        println!("ENV: {:?}", interp.env);
 
         Ok(())
     }

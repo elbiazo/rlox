@@ -99,6 +99,18 @@ impl Parser {
         if self.match_one_of(vec![scanner::TokenType::Number, scanner::TokenType::String]) {
             return Ok(expr::Expr::Literal(self.previous().literal.clone()));
         }
+        if self.match_one_of(vec![scanner::TokenType::Identifier]) {
+            return Ok(expr::Expr::Identifier(self.previous()));
+            // match self.previous().literal.clone() {
+            //     expr::Literal::String(string) => return Ok(expr::Expr::Identifier(string)),
+            //     _ => {
+            //         return Err(io::Error::new(
+            //             io::ErrorKind::InvalidData,
+            //             format!("Invalid expression: {:?}", self.peek().tok_type),
+            //         ));
+            //     }
+            // }
+        }
         if self.match_one_of(vec![scanner::TokenType::LeftParen]) {
             let expr = Box::new(self.expression()?);
             self.consume(
@@ -202,6 +214,8 @@ impl Parser {
     fn statement(&mut self) -> Result<expr::Stmt, io::Error> {
         if self.match_one_of(vec![scanner::TokenType::Print]) {
             return self.print_statement();
+        } else if self.match_one_of(vec![scanner::TokenType::Var]) {
+            return self.var_declaration();
         }
 
         self.expression_statement()
@@ -225,21 +239,11 @@ impl Parser {
 
         Ok(expr::Stmt::Var(name.lexme, initializer))
     }
-    fn declaration(&mut self) -> Result<expr::Stmt, io::Error> {
-        if self.match_one_of(vec![scanner::TokenType::Var]) {
-            return self.var_declaration();
-        } else {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Declaration needs token var",
-            ));
-        }
-    }
 
     pub fn parse(&mut self) -> Result<Vec<expr::Stmt>, io::Error> {
         let mut stmts = Vec::<expr::Stmt>::new();
         while !self.is_at_end() {
-            stmts.push(self.declaration()?);
+            stmts.push(self.statement()?);
         }
         Ok(stmts)
     }

@@ -1,6 +1,9 @@
 use crate::expr;
 use crate::scanner;
-pub struct Interpreter;
+use crate::environment::Environment;
+pub struct Interpreter {
+    pub env: Environment,
+}
 use std::io::{Error, ErrorKind};
 
 #[derive(Debug, Clone)]
@@ -13,7 +16,9 @@ pub enum Value {
 
 impl Interpreter {
     pub fn new() -> Interpreter {
-        Interpreter
+        Interpreter {
+            env: Environment::new(),
+        }
     }
 
     pub fn visit_expr(&self, expr: expr::Expr) -> Result<Value, &str> {
@@ -22,6 +27,7 @@ impl Interpreter {
             expr::Expr::Grouping(e) => self.visit_expr(*e),
             expr::Expr::Unary(op, e) => self.visit_unary_expr(op.clone(), *e),
             expr::Expr::Binary(left, op, right) => self.visit_binary_expr(*left, op, *right),
+            expr::Expr::Identifier(tok) => self.visit_var_expr(tok),
         }
     }
 
@@ -79,6 +85,13 @@ impl Interpreter {
         }
     }
 
+    pub fn visit_var_expr(&self, op: scanner::Token) -> Result<Value, &str>{
+        match self.env.get(op) {
+            Some(val) => Ok(val.clone()),
+            None => return Err("Visit var expr does not have anything"),
+        }
+    }
+
     pub fn visit_unary_expr(&self, op: scanner::Token, e: expr::Expr) -> Result<Value, &str> {
         match self.visit_expr(e) {
             Ok(val) => match val {
@@ -124,10 +137,21 @@ impl Interpreter {
         }
         Ok(())
     }
-    pub fn visit_stmt(&self, stmt: expr::Stmt) -> Result<(), Error> {
+    fn visit_var_stmt(&mut self, name: String, expr: expr::Expr) -> Result<(), Error>{
+        let value = match self.visit_expr(expr) {
+            Ok(val) => val,
+            Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
+        };
+
+        self.env.define(name, value);
+        Ok(())
+    }
+    pub fn visit_stmt(&mut self, stmt: expr::Stmt) -> Result<(), Error> {
         match stmt {
             expr::Stmt::Print(expr) => self.visit_print_stmt(expr),
+            expr::Stmt::Var(name, expr) => self.visit_var_stmt(name, expr),
             _ => Err(Error::new(ErrorKind::Other, "Unimplemnted stmt")),
         }
     }
+
 }

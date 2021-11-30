@@ -1,2 +1,2 @@
-print 3 + 3 * 6;
-print "TEST" + "A";
+var test = 3;
+var test3=4;
