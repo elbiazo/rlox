@@ -1,6 +1,7 @@
 use crate::environment::Environment;
 use crate::expr;
 use crate::scanner;
+use log::info;
 pub struct Interpreter {
     pub env: Environment,
 }
@@ -17,7 +18,7 @@ pub enum Value {
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            env: Environment::new(),
+            env: Environment::new(None),
         }
     }
 
@@ -87,6 +88,7 @@ impl Interpreter {
     }
 
     pub fn visit_identifier_expr(&self, op: scanner::Token) -> Result<Value, String> {
+        info!("\n\tenv: {:?}", self.env);
         self.env.get(op)
     }
 
@@ -152,11 +154,27 @@ impl Interpreter {
         self.env.assign(tok, value.clone())?;
         Ok(value.clone())
     }
+    fn execute_block(&mut self, statements: Vec<expr::Stmt>) -> Result<(), Error> {
+        let prev_env = self.env.clone();
+        self.env = Environment::new(Some(Box::new(prev_env.clone())));
+        for stmt in statements {
+            match self.visit_stmt(stmt) {
+                Err(err) => {
+                    self.env = prev_env;
+                    return Err(err);
+                }
+                _ => (),
+            }
+        }
+        self.env = prev_env;
+        Ok(())
+    }
 
     pub fn visit_stmt(&mut self, stmt: expr::Stmt) -> Result<(), Error> {
         match stmt {
             expr::Stmt::Print(expr) => self.visit_print_stmt(expr),
             expr::Stmt::Var(name, expr) => self.visit_var_stmt(name, expr),
+            expr::Stmt::Block(exprs) => self.execute_block(exprs),
             expr::Stmt::Expr(expr) => match expr {
                 expr::Expr::Assign(tok, e) => {
                     match self.visit_assign_expr(tok, *e) {

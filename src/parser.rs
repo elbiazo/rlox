@@ -80,7 +80,10 @@ impl Parser {
         if self.check(ty) {
             return Ok(self.advance());
         } else {
-            return Err(io::Error::new(io::ErrorKind::Other, msg));
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("{}. received {:?}", msg, ty),
+            ));
         }
     }
 
@@ -220,11 +223,24 @@ impl Parser {
         self.consume(scanner::TokenType::SemiColon, "Expected ; after value")?;
         Ok(expr::Stmt::Print(expr))
     }
+
+    fn block_stmt(&mut self) -> Result<expr::Stmt, io::Error> {
+        let mut statements = Vec::new();
+
+        while !self.check(scanner::TokenType::RightBrace) && !self.is_at_end() {
+            statements.push(self.statement()?);
+        }
+
+        self.consume(scanner::TokenType::RightBrace, "Expected } after block")?;
+        Ok(expr::Stmt::Block(statements))
+    }
     fn statement(&mut self) -> Result<expr::Stmt, io::Error> {
         if self.match_one_of(vec![scanner::TokenType::Print]) {
             return self.print_statement();
         } else if self.match_one_of(vec![scanner::TokenType::Var]) {
             return self.var_declaration();
+        } else if self.match_one_of(vec![scanner::TokenType::LeftBrace]) {
+            return self.block_stmt();
         }
 
         self.expression_statement()

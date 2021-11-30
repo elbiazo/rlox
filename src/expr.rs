@@ -22,4 +22,5 @@ pub enum Stmt {
     Print(Expr),
     Expr(Expr),
     Var(String, Expr),
+    Block(Vec<Stmt>),
 }
