@@ -192,11 +192,16 @@ impl Parser {
     fn assignment(&mut self) -> Result<expr::Expr, io::Error> {
         let expr = self.equality()?;
         if self.match_one_of(vec![scanner::TokenType::Equal]) {
-            let value  = self.assignment()?;
+            let value = self.assignment()?;
 
             match expr {
                 expr::Expr::Identifier(tok) => return Ok(expr::Expr::Assign(tok, Box::new(value))),
-                _ => return Err(io::Error::new(io::ErrorKind::Other, "Failed to do assignment it is not identifier")),
+                _ => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        "Failed to do assignment it is not identifier",
+                    ))
+                }
             }
         } else {
             return Ok(expr);

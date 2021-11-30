@@ -1,5 +1,3 @@
-use scanner::Token;
-
 use crate::environment::Environment;
 use crate::expr;
 use crate::scanner;
@@ -159,7 +157,16 @@ impl Interpreter {
         match stmt {
             expr::Stmt::Print(expr) => self.visit_print_stmt(expr),
             expr::Stmt::Var(name, expr) => self.visit_var_stmt(name, expr),
-            _ => Err(Error::new(ErrorKind::Other, "Unimplemnted stmt")),
+            expr::Stmt::Expr(expr) => match expr {
+                expr::Expr::Assign(tok, e) => {
+                    match self.visit_assign_expr(tok, *e) {
+                        Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
+                        _ => (),
+                    }
+                    Ok(())
+                }
+                _ => Err(Error::new(ErrorKind::Other, "Unimplemented STMT")),
+            },
         }
     }
 }

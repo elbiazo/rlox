@@ -44,6 +44,7 @@ impl Lox {
                 _ => (),
             }
         }
+        info!("\n\tenv: {:?}", interp.env);
 
         Ok(())
     }
