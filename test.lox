@@ -1,2 +1,4 @@
-var test = 3;
-var test3=4;
+var a = "before";
+print a; // "before".
+var a = "after";
+print a; // "after".

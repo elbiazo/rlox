@@ -38,7 +38,6 @@ impl Lox {
         for stmt in stmts {
             interp.visit_stmt(stmt)?
         }
-        println!("ENV: {:?}", interp.env);
 
         Ok(())
     }

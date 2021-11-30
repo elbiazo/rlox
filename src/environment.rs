@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use crate::scanner::Token;
+
 use crate::interpreter::Value;
+use crate::scanner::Token;
 
 #[derive(Debug)]
 pub struct Environment {
-    pub values: HashMap::<String, Value>,
+    pub values: HashMap<String, Value>,
 }
 
 impl Environment {
@@ -18,7 +19,10 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    pub fn get(&self, name: Token) -> Option<&Value>{
-        self.values.get(&name.lexme).clone()
+    pub fn get(&self, name: Token) -> Result<Value, &str> {
+        match self.values.get(&name.lexme).clone() {
+            Some(val) => Ok(val.clone()),
+            None => return Err("Undefined variable"),
+        }
     }
 }

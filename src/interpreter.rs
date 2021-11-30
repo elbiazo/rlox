@@ -1,6 +1,6 @@
+use crate::environment::Environment;
 use crate::expr;
 use crate::scanner;
-use crate::environment::Environment;
 pub struct Interpreter {
     pub env: Environment,
 }
@@ -85,11 +85,8 @@ impl Interpreter {
         }
     }
 
-    pub fn visit_var_expr(&self, op: scanner::Token) -> Result<Value, &str>{
-        match self.env.get(op) {
-            Some(val) => Ok(val.clone()),
-            None => return Err("Visit var expr does not have anything"),
-        }
+    pub fn visit_var_expr(&self, op: scanner::Token) -> Result<Value, &str> {
+        self.env.get(op)
     }
 
     pub fn visit_unary_expr(&self, op: scanner::Token, e: expr::Expr) -> Result<Value, &str> {
@@ -137,7 +134,7 @@ impl Interpreter {
         }
         Ok(())
     }
-    fn visit_var_stmt(&mut self, name: String, expr: expr::Expr) -> Result<(), Error>{
+    fn visit_var_stmt(&mut self, name: String, expr: expr::Expr) -> Result<(), Error> {
         let value = match self.visit_expr(expr) {
             Ok(val) => val,
             Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
@@ -153,5 +150,4 @@ impl Interpreter {
             _ => Err(Error::new(ErrorKind::Other, "Unimplemnted stmt")),
         }
     }
-
 }

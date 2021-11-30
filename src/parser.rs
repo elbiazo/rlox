@@ -101,15 +101,6 @@ impl Parser {
         }
         if self.match_one_of(vec![scanner::TokenType::Identifier]) {
             return Ok(expr::Expr::Identifier(self.previous()));
-            // match self.previous().literal.clone() {
-            //     expr::Literal::String(string) => return Ok(expr::Expr::Identifier(string)),
-            //     _ => {
-            //         return Err(io::Error::new(
-            //             io::ErrorKind::InvalidData,
-            //             format!("Invalid expression: {:?}", self.peek().tok_type),
-            //         ));
-            //     }
-            // }
         }
         if self.match_one_of(vec![scanner::TokenType::LeftParen]) {
             let expr = Box::new(self.expression()?);
