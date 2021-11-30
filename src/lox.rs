@@ -36,7 +36,12 @@ impl Lox {
 
         let mut interp = Interpreter::new();
         for stmt in stmts {
-            interp.visit_stmt(stmt)?
+            match interp.visit_stmt(stmt) {
+                Err(err_msg) => {
+                    error!("{}", err_msg)
+                }
+                _ => (),
+            }
         }
 
         Ok(())

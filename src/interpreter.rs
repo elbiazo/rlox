@@ -1,3 +1,5 @@
+use scanner::Token;
+
 use crate::environment::Environment;
 use crate::expr;
 use crate::scanner;
@@ -21,13 +23,14 @@ impl Interpreter {
         }
     }
 
-    pub fn visit_expr(&self, expr: expr::Expr) -> Result<Value, &str> {
+    pub fn visit_expr(&mut self, expr: expr::Expr) -> Result<Value, &str> {
         match expr {
             expr::Expr::Literal(lit) => Ok(self.visit_literal_expr(lit)),
             expr::Expr::Grouping(e) => self.visit_expr(*e),
             expr::Expr::Unary(op, e) => self.visit_unary_expr(op.clone(), *e),
             expr::Expr::Binary(left, op, right) => self.visit_binary_expr(*left, op, *right),
             expr::Expr::Identifier(tok) => self.visit_var_expr(tok),
+            expr::Expr::Assign(tok, e) => self.visit_assign_expr(tok, *e),
         }
     }
 
@@ -143,6 +146,15 @@ impl Interpreter {
         self.env.define(name, value);
         Ok(())
     }
+    fn visit_assign_expr(&mut self, tok: scanner::Token, e: expr::Expr) -> Result<Value, &str>{
+        let value = match self.visit_expr(e) {
+            Ok(val) => val,
+            Err(msg) => return Err(msg),
+        };
+        self.env.assign(tok, value);
+        Ok(Value::Nil)
+    }
+
     pub fn visit_stmt(&mut self, stmt: expr::Stmt) -> Result<(), Error> {
         match stmt {
             expr::Stmt::Print(expr) => self.visit_print_stmt(expr),

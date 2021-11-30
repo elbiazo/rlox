@@ -189,8 +189,21 @@ impl Parser {
         Ok(expr)
     }
 
+    fn assignment(&mut self) -> Result<expr::Expr, io::Error> {
+        let expr = self.equality()?;
+        if self.match_one_of(vec![scanner::TokenType::Equal]) {
+            let value  = self.assignment()?;
+
+            match expr {
+                expr::Expr::Identifier(tok) => return Ok(expr::Expr::Assign(tok, Box::new(value))),
+                _ => return Err(io::Error::new(io::ErrorKind::Other, "Failed to do assignment")),
+            }
+        } else {
+            return Err(io::Error::new(io::ErrorKind::Other, "Failed to do assignment"));
+        }
+    }
     fn expression(&mut self) -> Result<expr::Expr, io::Error> {
-        self.equality()
+        self.assignment()
     }
     fn expression_statement(&mut self) -> Result<expr::Stmt, io::Error> {
         let expr = self.expression()?;

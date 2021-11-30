@@ -6,6 +6,7 @@ pub enum Expr {
     Binary(Box<Expr>, scanner::Token, Box<Expr>),
     Grouping(Box<Expr>),
     Identifier(scanner::Token),
+    Assign(scanner::Token, Box<Expr>),
 }
 
 #[derive(Debug, Clone)]
