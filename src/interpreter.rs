@@ -23,23 +23,23 @@ impl Interpreter {
         }
     }
 
-    pub fn visit_expr(&mut self, expr: expr::Expr) -> Result<Value, &str> {
+    pub fn visit_expr(&mut self, expr: expr::Expr) -> Result<Value, String> {
         match expr {
             expr::Expr::Literal(lit) => Ok(self.visit_literal_expr(lit)),
             expr::Expr::Grouping(e) => self.visit_expr(*e),
             expr::Expr::Unary(op, e) => self.visit_unary_expr(op.clone(), *e),
             expr::Expr::Binary(left, op, right) => self.visit_binary_expr(*left, op, *right),
-            expr::Expr::Identifier(tok) => self.visit_var_expr(tok),
+            expr::Expr::Identifier(tok) => self.visit_identifier_expr(tok),
             expr::Expr::Assign(tok, e) => self.visit_assign_expr(tok, *e),
         }
     }
 
     fn visit_binary_expr(
-        &self,
+        &mut self,
         left: expr::Expr,
         op: scanner::Token,
         right: expr::Expr,
-    ) -> Result<Value, &str> {
+    ) -> Result<Value, String> {
         match self.visit_expr(left) {
             Ok(val) => match val {
                 // Checking Number op Number
@@ -61,9 +61,9 @@ impl Interpreter {
                             scanner::TokenType::EqualEqual => {
                                 Ok(Value::Bool(left_val == right_val))
                             }
-                            _ => return Err("Unsuppored binary expr"),
+                            _ => return Err(format!("Unsuppored binary expr")),
                         },
-                        _ => return Err("Binary expr needs f64"),
+                        _ => return Err(format!("Binary expr needs f64")),
                     },
                     Err(msg) => return Err(msg),
                 },
@@ -75,35 +75,35 @@ impl Interpreter {
                             scanner::TokenType::Plus => {
                                 Ok(Value::String(format!("{}{}", left_val, right_val)))
                             }
-                            _ => return Err("Unsuppored binary expr"),
+                            _ => return Err(format!("Unsuppored binary expr")),
                         },
-                        _ => return Err("Binary expr needs String"),
+                        _ => return Err(format!("Binary expr needs String")),
                     },
                     Err(msg) => return Err(msg),
                 },
 
-                _ => return Err("Binary expr needs f64"),
+                _ => return Err(format!("Binary expr needs f64")),
             },
             Err(msg) => return Err(msg),
         }
     }
 
-    pub fn visit_var_expr(&self, op: scanner::Token) -> Result<Value, &str> {
+    pub fn visit_identifier_expr(&self, op: scanner::Token) -> Result<Value, String> {
         self.env.get(op)
     }
 
-    pub fn visit_unary_expr(&self, op: scanner::Token, e: expr::Expr) -> Result<Value, &str> {
+    pub fn visit_unary_expr(&mut self, op: scanner::Token, e: expr::Expr) -> Result<Value, String> {
         match self.visit_expr(e) {
             Ok(val) => match val {
                 Value::Number(num) => match op.tok_type {
                     scanner::TokenType::Minus => Ok(Value::Number(-num)),
                     scanner::TokenType::Plus => Ok(Value::Number(num)),
                     scanner::TokenType::Bang => Ok(Value::Bool(false)),
-                    _ => Err("Op type is not minus or plus"),
+                    _ => Err(format!("Op type is not minus or plus")),
                 },
                 _ => match op.tok_type {
                     scanner::TokenType::Bang => Ok(Value::Bool(false)),
-                    _ => Err("Right is not a number"),
+                    _ => Err(format!("Right is not a number")),
                 },
             },
             Err(err) => return Err(err),
@@ -119,7 +119,7 @@ impl Interpreter {
         }
     }
 
-    fn visit_print_stmt(&self, expr: expr::Expr) -> Result<(), Error> {
+    fn visit_print_stmt(&mut self, expr: expr::Expr) -> Result<(), Error> {
         let value = self.visit_expr(expr);
         match value {
             Ok(val) => match val {
@@ -146,13 +146,13 @@ impl Interpreter {
         self.env.define(name, value);
         Ok(())
     }
-    fn visit_assign_expr(&mut self, tok: scanner::Token, e: expr::Expr) -> Result<Value, &str>{
+    fn visit_assign_expr(&mut self, tok: scanner::Token, e: expr::Expr) -> Result<Value, String> {
         let value = match self.visit_expr(e) {
             Ok(val) => val,
             Err(msg) => return Err(msg),
         };
-        self.env.assign(tok, value);
-        Ok(Value::Nil)
+        self.env.assign(tok, value.clone())?;
+        Ok(value.clone())
     }
 
     pub fn visit_stmt(&mut self, stmt: expr::Stmt) -> Result<(), Error> {

@@ -1,7 +1,7 @@
 use crate::interpreter::Interpreter;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
-use log::error;
+use log::{error, info};
 use std::fs::read;
 use std::io;
 use std::io::prelude::*;
@@ -23,7 +23,7 @@ impl Lox {
             _ => (),
         }
 
-        // info!("{:?}", scanner.tokens);
+        info!("\n\ttokens: {:?}", scanner.tokens);
 
         let mut parser = Parser::new(scanner.tokens);
         let stmts = match parser.parse() {
@@ -33,6 +33,7 @@ impl Lox {
                 return Ok(());
             }
         };
+        info!("\n\tstmts: {:?}", stmts);
 
         let mut interp = Interpreter::new();
         for stmt in stmts {

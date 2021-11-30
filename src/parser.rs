@@ -196,10 +196,10 @@ impl Parser {
 
             match expr {
                 expr::Expr::Identifier(tok) => return Ok(expr::Expr::Assign(tok, Box::new(value))),
-                _ => return Err(io::Error::new(io::ErrorKind::Other, "Failed to do assignment")),
+                _ => return Err(io::Error::new(io::ErrorKind::Other, "Failed to do assignment it is not identifier")),
             }
         } else {
-            return Err(io::Error::new(io::ErrorKind::Other, "Failed to do assignment"));
+            return Ok(expr);
         }
     }
     fn expression(&mut self) -> Result<expr::Expr, io::Error> {
