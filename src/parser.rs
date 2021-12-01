@@ -234,6 +234,21 @@ impl Parser {
         self.consume(scanner::TokenType::RightBrace, "Expected } after block")?;
         Ok(expr::Stmt::Block(statements))
     }
+    fn if_stmt(&mut self) -> Result<expr::Stmt, io::Error> {
+        self.consume(scanner::TokenType::LeftParen, "Expected '(' after if")?;
+        let condition = self.expression()?;
+        self.consume(scanner::TokenType::RightParen, "exprected ')' after if")?;
+
+        let then_branch = Box::new(self.statement()?);
+
+        let mut else_branch = None;
+        if self.match_one_of(vec![scanner::TokenType::Else]) {
+            else_branch = Some(Box::new(self.statement()?))
+        }
+
+        Ok(expr::Stmt::If(condition, then_branch, else_branch))
+    }
+
     fn statement(&mut self) -> Result<expr::Stmt, io::Error> {
         if self.match_one_of(vec![scanner::TokenType::Print]) {
             return self.print_statement();
@@ -241,6 +256,8 @@ impl Parser {
             return self.var_declaration();
         } else if self.match_one_of(vec![scanner::TokenType::LeftBrace]) {
             return self.block_stmt();
+        } else if self.match_one_of(vec![scanner::TokenType::If]) {
+            return self.if_stmt();
         }
 
         self.expression_statement()

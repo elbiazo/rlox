@@ -23,4 +23,5 @@ pub enum Stmt {
     Expr(Expr),
     Var(String, Expr),
     Block(Vec<Stmt>),
+    If(Expr, Box<Stmt>, Option<Box<Stmt>>),
 }

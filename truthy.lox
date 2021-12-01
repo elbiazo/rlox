@@ -1,0 +1,6 @@
+if (false) {
+    print "trueeeee";
+
+} else {
+    print "falseeee";
+}

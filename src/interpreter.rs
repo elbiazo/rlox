@@ -92,6 +92,44 @@ impl Interpreter {
         self.env.get(op)
     }
 
+    fn is_truthy(&self, val: Value) -> bool {
+        match val {
+            Value::Bool(boolean) => {
+                if boolean {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            Value::Nil => return false,
+            _ => return true,
+        }
+    }
+    pub fn visit_if_stmt(
+        &mut self,
+        condition: expr::Expr,
+        then_branch: expr::Stmt,
+        else_branch: Option<Box<expr::Stmt>>,
+    ) -> Result<(), Error> {
+        let cond_val = match self.visit_expr(condition) {
+            Ok(val) => val,
+            Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
+        };
+
+        if self.is_truthy(cond_val) {
+            self.visit_stmt(then_branch)?;
+        } else {
+            match else_branch {
+                Some(else_stmt) => {
+                    self.visit_stmt(*else_stmt)?;
+                    return Ok(());
+                }
+                None => return Ok(()),
+            }
+        }
+        Ok(())
+    }
+
     pub fn visit_unary_expr(&mut self, op: scanner::Token, e: expr::Expr) -> Result<Value, String> {
         match self.visit_expr(e) {
             Ok(val) => match val {
@@ -175,6 +213,9 @@ impl Interpreter {
             expr::Stmt::Print(expr) => self.visit_print_stmt(expr),
             expr::Stmt::Var(name, expr) => self.visit_var_stmt(name, expr),
             expr::Stmt::Block(exprs) => self.execute_block(exprs),
+            expr::Stmt::If(condition, then_branch, else_branch) => {
+                self.visit_if_stmt(condition, *then_branch, else_branch)
+            }
             expr::Stmt::Expr(expr) => match expr {
                 expr::Expr::Assign(tok, e) => {
                     match self.visit_assign_expr(tok, *e) {
