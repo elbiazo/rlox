@@ -1,11 +1,5 @@
-if (false) {
+if (false or true) {
     print "trueeeee";
 
-} else {
-    print "falseeee";
-    if (true) {
-        print "realll truee";
-    } else {
-        print "not here";
-    }
-}
+}  
+

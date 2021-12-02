@@ -30,6 +30,7 @@ impl Interpreter {
             expr::Expr::Binary(left, op, right) => self.visit_binary_expr(*left, op, *right),
             expr::Expr::Identifier(tok) => self.visit_identifier_expr(tok),
             expr::Expr::Assign(tok, e) => self.visit_assign_expr(tok, *e),
+            expr::Expr::Logical(left, op, right) => self.visit_logical_expr(*left, op, *right),
         }
     }
 
@@ -167,7 +168,7 @@ impl Interpreter {
                 _ => {
                     return Err(Error::new(
                         ErrorKind::Other,
-                        "print visitor needs string not other value",
+                        format!("print visitor needs string not other value. recv: {val:?}"),
                     ))
                 }
             },
@@ -208,6 +209,25 @@ impl Interpreter {
         Ok(())
     }
 
+    fn visit_logical_expr(
+        &mut self,
+        left: expr::Expr,
+        op: scanner::Token,
+        right: expr::Expr,
+    ) -> Result<Value, String> {
+        let left = self.visit_expr(left)?;
+
+        if op.tok_type == scanner::TokenType::Or {
+            if self.is_truthy(left.clone()) {
+                return Ok(left);
+            }
+        } else {
+            if !self.is_truthy(left.clone()) {
+                return Ok(left);
+            }
+        }
+        return Ok(self.visit_expr(right)?);
+    }
     pub fn visit_stmt(&mut self, stmt: expr::Stmt) -> Result<(), Error> {
         match stmt {
             expr::Stmt::Print(expr) => self.visit_print_stmt(expr),

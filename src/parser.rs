@@ -191,9 +191,30 @@ impl Parser {
 
         Ok(expr)
     }
+    fn or(&mut self) -> Result<expr::Expr, io::Error> {
+        let mut expr = self.and()?;
+        while self.match_one_of(vec![scanner::TokenType::Or]) {
+            let operator = self.previous();
+            let right = self.and()?;
+            expr = expr::Expr::Logical(Box::new(expr), operator, Box::new(right));
+        }
+
+        Ok(expr)
+    }
+    fn and(&mut self) -> Result<expr::Expr, io::Error> {
+        let mut expr = self.equality()?;
+
+        while self.match_one_of(vec![scanner::TokenType::And]) {
+            let operator = self.previous();
+            let right = self.equality()?;
+            expr = expr::Expr::Logical(Box::new(expr), operator, Box::new(right));
+        }
+
+        Ok(expr)
+    }
 
     fn assignment(&mut self) -> Result<expr::Expr, io::Error> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
         if self.match_one_of(vec![scanner::TokenType::Equal]) {
             let value = self.assignment()?;
 

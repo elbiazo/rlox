@@ -7,6 +7,7 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Identifier(scanner::Token),
     Assign(scanner::Token, Box<Expr>),
+    Logical(Box<Expr>, scanner::Token, Box<Expr>),
 }
 
 #[derive(Debug, Clone)]
