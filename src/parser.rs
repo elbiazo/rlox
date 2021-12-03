@@ -284,6 +284,60 @@ impl Parser {
         Ok(expr::Stmt::While(condition, Box::new(body)))
     }
 
+    fn for_stmt(&mut self) -> Result<expr::Stmt, io::Error> {
+        self.consume(scanner::TokenType::LeftParen, "Expected ( after for.")?;
+
+        let mut maybe_initializer: Option<expr::Stmt> = None;
+        if self.matches(scanner::TokenType::SemiColon) {
+        } else if self.matches(scanner::TokenType::Var) {
+            maybe_initializer = Some(self.var_declaration()?)
+        } else {
+            maybe_initializer = Some(self.expression_statement()?)
+        }
+        let maybe_initializer = maybe_initializer;
+
+        let mut maybe_condition: Option<expr::Expr> = None;
+        if !self.check(scanner::TokenType::SemiColon) {
+            maybe_condition = Some(self.expression()?)
+        }
+        let maybe_condition = maybe_condition;
+
+        self.consume(
+            scanner::TokenType::SemiColon,
+            "Expected ; after loop condition",
+        )?;
+
+        let maybe_increment = if !self.check(scanner::TokenType::RightParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(
+            scanner::TokenType::RightParen,
+            "Expected ) after for clauses",
+        )?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = maybe_increment {
+            body = expr::Stmt::Block(vec![body, expr::Stmt::Expr(increment)])
+        }
+
+        let condition = match maybe_condition {
+            Some(cond) => cond,
+            None => expr::Expr::Literal(expr::Literal::True),
+        };
+        body = expr::Stmt::While(condition, Box::new(body));
+
+        if let Some(initializer) = maybe_initializer {
+            body = expr::Stmt::Block(vec![initializer, body])
+        }
+        let body = body;
+
+        Ok(body)
+    }
+
     fn statement(&mut self) -> Result<expr::Stmt, io::Error> {
         if self.match_one_of(vec![scanner::TokenType::Print]) {
             return self.print_statement();
@@ -295,6 +349,8 @@ impl Parser {
             return self.if_stmt();
         } else if self.match_one_of(vec![scanner::TokenType::While]) {
             return self.while_stmt();
+        } else if self.match_one_of(vec![scanner::TokenType::For]) {
+            return self.for_stmt();
         }
 
         self.expression_statement()
@@ -309,7 +365,7 @@ impl Parser {
             false => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
-                    "Var decl requires it to match to eqauls",
+                    format!("Var decl requires it to match to equals. Got {name:?}"),
                 ))
             }
         };
