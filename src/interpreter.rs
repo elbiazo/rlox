@@ -22,10 +22,10 @@ impl Interpreter {
         }
     }
 
-    pub fn visit_expr(&mut self, expr: expr::Expr) -> Result<Value, String> {
+    pub fn evaluate(&mut self, expr: expr::Expr) -> Result<Value, Error> {
         match expr {
             expr::Expr::Literal(lit) => Ok(self.visit_literal_expr(lit)),
-            expr::Expr::Grouping(e) => self.visit_expr(*e),
+            expr::Expr::Grouping(e) => self.evaluate(*e),
             expr::Expr::Unary(op, e) => self.visit_unary_expr(op.clone(), *e),
             expr::Expr::Binary(left, op, right) => self.visit_binary_expr(*left, op, *right),
             expr::Expr::Identifier(tok) => self.visit_identifier_expr(tok),
@@ -39,17 +39,18 @@ impl Interpreter {
         left: expr::Expr,
         op: scanner::Token,
         right: expr::Expr,
-    ) -> Result<Value, String> {
-        match self.visit_expr(left) {
+    ) -> Result<Value, Error> {
+        match self.evaluate(left) {
             Ok(val) => match val {
                 // Checking Number op Number
-                Value::Number(left_val) => match self.visit_expr(right) {
+                Value::Number(left_val) => match self.evaluate(right) {
                     Ok(val) => match val {
                         Value::Number(right_val) => match op.tok_type {
                             scanner::TokenType::Plus => Ok(Value::Number(left_val + right_val)),
                             scanner::TokenType::Minus => Ok(Value::Number(left_val - right_val)),
                             scanner::TokenType::Slash => Ok(Value::Number(left_val / right_val)),
                             scanner::TokenType::Star => Ok(Value::Number(left_val * right_val)),
+                            scanner::TokenType::Modulo => Ok(Value::Number(left_val % right_val)),
                             // Comparison Operator
                             scanner::TokenType::Greater => Ok(Value::Bool(left_val > right_val)),
                             scanner::TokenType::GreaterEqual => {
@@ -61,34 +62,59 @@ impl Interpreter {
                             scanner::TokenType::EqualEqual => {
                                 Ok(Value::Bool(left_val == right_val))
                             }
-                            _ => return Err(format!("Unsuppored binary expr")),
+                            _ => {
+                                return Err(Error::new(
+                                    ErrorKind::Other,
+                                    format!("Unsuppored binary expr"),
+                                ))
+                            }
                         },
-                        _ => return Err(format!("Binary expr needs f64")),
+                        _ => {
+                            return Err(Error::new(
+                                ErrorKind::Other,
+                                format!("Binary expr needs f64"),
+                            ))
+                        }
                     },
                     Err(msg) => return Err(msg),
                 },
 
                 // Checking String + String
-                Value::String(left_val) => match self.visit_expr(right) {
+                Value::String(left_val) => match self.evaluate(right) {
                     Ok(val) => match val {
                         Value::String(right_val) => match op.tok_type {
                             scanner::TokenType::Plus => {
                                 Ok(Value::String(format!("{}{}", left_val, right_val)))
                             }
-                            _ => return Err(format!("Unsuppored binary expr")),
+                            _ => {
+                                return Err(Error::new(
+                                    ErrorKind::Other,
+                                    format!("Unsuppored binary expr"),
+                                ))
+                            }
                         },
-                        _ => return Err(format!("Binary expr needs String")),
+                        _ => {
+                            return Err(Error::new(
+                                ErrorKind::Other,
+                                format!("Binary expr needs String"),
+                            ))
+                        }
                     },
                     Err(msg) => return Err(msg),
                 },
 
-                _ => return Err(format!("Binary expr needs f64")),
+                _ => {
+                    return Err(Error::new(
+                        ErrorKind::Other,
+                        format!("Binary expr needs f64"),
+                    ))
+                }
             },
             Err(msg) => return Err(msg),
         }
     }
 
-    pub fn visit_identifier_expr(&self, op: scanner::Token) -> Result<Value, String> {
+    pub fn visit_identifier_expr(&self, op: scanner::Token) -> Result<Value, Error> {
         info!("\n\tenv: {:?}", self.env);
         self.env.get(op)
     }
@@ -112,17 +138,17 @@ impl Interpreter {
         then_branch: expr::Stmt,
         else_branch: Option<Box<expr::Stmt>>,
     ) -> Result<(), Error> {
-        let cond_val = match self.visit_expr(condition) {
+        let cond_val = match self.evaluate(condition) {
             Ok(val) => val,
             Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
         };
 
         if self.is_truthy(cond_val) {
-            self.visit_stmt(then_branch)?;
+            self.execute(then_branch)?;
         } else {
             match else_branch {
                 Some(else_stmt) => {
-                    self.visit_stmt(*else_stmt)?;
+                    self.execute(*else_stmt)?;
                     return Ok(());
                 }
                 None => return Ok(()),
@@ -131,18 +157,24 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn visit_unary_expr(&mut self, op: scanner::Token, e: expr::Expr) -> Result<Value, String> {
-        match self.visit_expr(e) {
+    pub fn visit_unary_expr(&mut self, op: scanner::Token, e: expr::Expr) -> Result<Value, Error> {
+        match self.evaluate(e) {
             Ok(val) => match val {
                 Value::Number(num) => match op.tok_type {
                     scanner::TokenType::Minus => Ok(Value::Number(-num)),
                     scanner::TokenType::Plus => Ok(Value::Number(num)),
                     scanner::TokenType::Bang => Ok(Value::Bool(false)),
-                    _ => Err(format!("Op type is not minus or plus")),
+                    _ => Err(Error::new(
+                        ErrorKind::Other,
+                        format!("Op type is not minus or plus"),
+                    )),
                 },
                 _ => match op.tok_type {
                     scanner::TokenType::Bang => Ok(Value::Bool(false)),
-                    _ => Err(format!("Right is not a number")),
+                    _ => Err(Error::new(
+                        ErrorKind::Other,
+                        format!("Right is not a number"),
+                    )),
                 },
             },
             Err(err) => return Err(err),
@@ -159,7 +191,7 @@ impl Interpreter {
     }
 
     fn visit_print_stmt(&mut self, expr: expr::Expr) -> Result<(), Error> {
-        let value = self.visit_expr(expr);
+        let value = self.evaluate(expr);
         match value {
             Ok(val) => match val {
                 Value::String(string) => println!("{}", string),
@@ -177,7 +209,7 @@ impl Interpreter {
         Ok(())
     }
     fn visit_var_stmt(&mut self, name: String, expr: expr::Expr) -> Result<(), Error> {
-        let value = match self.visit_expr(expr) {
+        let value = match self.evaluate(expr) {
             Ok(val) => val,
             Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
         };
@@ -185,19 +217,19 @@ impl Interpreter {
         self.env.define(name, value);
         Ok(())
     }
-    fn visit_assign_expr(&mut self, tok: scanner::Token, e: expr::Expr) -> Result<Value, String> {
-        let value = match self.visit_expr(e) {
+    fn visit_assign_expr(&mut self, tok: scanner::Token, e: expr::Expr) -> Result<Value, Error> {
+        let value = match self.evaluate(e) {
             Ok(val) => val,
             Err(msg) => return Err(msg),
         };
         self.env.assign(tok, value.clone())?;
         Ok(value.clone())
     }
-    fn execute_block(&mut self, statements: Vec<expr::Stmt>) -> Result<(), Error> {
+    fn visit_block_stmt(&mut self, statements: Vec<expr::Stmt>) -> Result<(), Error> {
         let prev_env = self.env.clone();
         self.env = Environment::new(Some(Box::new(prev_env.clone())));
         for stmt in statements {
-            match self.visit_stmt(stmt) {
+            match self.execute(stmt) {
                 Err(err) => {
                     self.env = prev_env;
                     return Err(err);
@@ -205,7 +237,10 @@ impl Interpreter {
                 _ => (),
             }
         }
-        self.env = prev_env;
+        match self.env.enclosing.clone() {
+            Some(enc) => self.env = *enc,
+            None => (),
+        }
         Ok(())
     }
 
@@ -214,8 +249,8 @@ impl Interpreter {
         left: expr::Expr,
         op: scanner::Token,
         right: expr::Expr,
-    ) -> Result<Value, String> {
-        let left = self.visit_expr(left)?;
+    ) -> Result<Value, Error> {
+        let left = self.evaluate(left)?;
 
         if op.tok_type == scanner::TokenType::Or {
             if self.is_truthy(left.clone()) {
@@ -226,20 +261,30 @@ impl Interpreter {
                 return Ok(left);
             }
         }
-        return Ok(self.visit_expr(right)?);
+        return Ok(self.evaluate(right)?);
     }
-    pub fn visit_stmt(&mut self, stmt: expr::Stmt) -> Result<(), Error> {
+
+    fn visit_while(&mut self, condition: expr::Expr, body: expr::Stmt) -> Result<(), Error> {
+        let mut cond = self.evaluate(condition.clone())?;
+        while self.is_truthy(cond.clone()) {
+            self.execute(body.clone())?;
+            cond = self.evaluate(condition.clone())?;
+        }
+        Ok(())
+    }
+    pub fn execute(&mut self, stmt: expr::Stmt) -> Result<(), Error> {
         match stmt {
             expr::Stmt::Print(expr) => self.visit_print_stmt(expr),
             expr::Stmt::Var(name, expr) => self.visit_var_stmt(name, expr),
-            expr::Stmt::Block(exprs) => self.execute_block(exprs),
+            expr::Stmt::Block(exprs) => self.visit_block_stmt(exprs),
             expr::Stmt::If(condition, then_branch, else_branch) => {
                 self.visit_if_stmt(condition, *then_branch, else_branch)
             }
+            expr::Stmt::While(condition, body) => self.visit_while(condition, *body),
             expr::Stmt::Expr(expr) => match expr {
                 expr::Expr::Assign(tok, e) => {
                     match self.visit_assign_expr(tok, *e) {
-                        Err(msg) => return Err(Error::new(ErrorKind::Other, msg)),
+                        Err(msg) => return Err(msg),
                         _ => (),
                     }
                     Ok(())

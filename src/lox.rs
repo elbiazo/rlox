@@ -23,7 +23,7 @@ impl Lox {
             _ => (),
         }
 
-        info!("\n\ttokens: {:?}", scanner.tokens);
+        // info!("\n\ttokens: {:?}", scanner.tokens);
 
         let mut parser = Parser::new(scanner.tokens);
         let stmts = match parser.parse() {
@@ -33,11 +33,11 @@ impl Lox {
                 return Ok(());
             }
         };
-        info!("\n\tstmts: {:?}", stmts);
+        // info!("\n\tstmts: {:?}", stmts);
 
         let mut interp = Interpreter::new();
         for stmt in stmts {
-            match interp.visit_stmt(stmt) {
+            match interp.execute(stmt) {
                 Err(err_msg) => {
                     error!("{}", err_msg)
                 }

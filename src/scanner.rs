@@ -16,6 +16,7 @@ pub enum TokenType {
     SemiColon,
     Slash,
     Star,
+    Modulo,
 
     // One or two character tokens.
     Bang,
@@ -66,6 +67,7 @@ impl fmt::Debug for TokenType {
             TokenType::SemiColon => write!(f, "SemiColon"),
             TokenType::Slash => write!(f, "Slash"),
             TokenType::Star => write!(f, "Star"),
+            TokenType::Modulo => write!(f, "Modulo"),
 
             TokenType::Bang => write!(f, "Bang"),
             TokenType::BangEqual => write!(f, "BangEqual"),
@@ -216,6 +218,7 @@ impl Scanner {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::SemiColon),
             '*' => self.add_token(TokenType::Star),
+            '%' => self.add_token(TokenType::Modulo),
 
             // Operators
             '!' => {

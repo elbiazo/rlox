@@ -1,0 +1,7 @@
+var a = 3;
+
+if (true) {
+    a = 4;
+    print a;
+}
+print a;

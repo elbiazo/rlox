@@ -134,7 +134,11 @@ impl Parser {
     fn factor(&mut self) -> Result<expr::Expr, io::Error> {
         let mut expr = self.unary()?;
 
-        while self.match_one_of(vec![scanner::TokenType::Slash, scanner::TokenType::Star]) {
+        while self.match_one_of(vec![
+            scanner::TokenType::Slash,
+            scanner::TokenType::Star,
+            scanner::TokenType::Modulo,
+        ]) {
             let op = self.previous().clone();
             let right = Box::new(self.unary()?);
             let left = Box::new(expr);
@@ -270,6 +274,16 @@ impl Parser {
         Ok(expr::Stmt::If(condition, then_branch, else_branch))
     }
 
+    fn while_stmt(&mut self) -> Result<expr::Stmt, io::Error> {
+        self.consume(scanner::TokenType::LeftParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(scanner::TokenType::RightParen, "Expect ')' after 'while'.")?;
+
+        let body = self.statement()?;
+
+        Ok(expr::Stmt::While(condition, Box::new(body)))
+    }
+
     fn statement(&mut self) -> Result<expr::Stmt, io::Error> {
         if self.match_one_of(vec![scanner::TokenType::Print]) {
             return self.print_statement();
@@ -279,6 +293,8 @@ impl Parser {
             return self.block_stmt();
         } else if self.match_one_of(vec![scanner::TokenType::If]) {
             return self.if_stmt();
+        } else if self.match_one_of(vec![scanner::TokenType::While]) {
+            return self.while_stmt();
         }
 
         self.expression_statement()
